@@ -52,7 +52,7 @@ jobs:
           mkdir -p "$HOME/.android"
           keytool -genkeypair -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -dname "CN=Android Debug,O=Android,C=US" -validity 10000 -keyalg RSA -keysize 2048 -noprompt
           mkdir -p "$HOME/.config/godot"
-          cat > "$HOME/.config/godot/editor_settings-4.tres" <<EOF
+          cat > "$HOME/.config/godot/editor_settings-4.4.tres" <<EOF
           [gd_resource type="EditorSettings" format=3]
           [resource]
           export/android/java_sdk_path = "$JAVA_HOME"
@@ -95,7 +95,7 @@ jobs:
           echo "=== Android export configuration ==="
           grep -nE '^\\[preset|^name=|^platform=|gradle|custom_template|target_sdk|version/code|package/' "$PROJECT_DIR/export_presets.cfg" || true
           echo "=== Editor Android settings ==="
-          grep -n 'export/android/' "$HOME/.config/godot/editor_settings-4.tres" || true
+          grep -n 'export/android/' "$HOME/.config/godot/editor_settings-4.4.tres" || true
           test -x "$JAVA_HOME/bin/java"
           test -d "$ANDROID_HOME/platforms/android-35"
           test -s "$HOME/.android/debug.keystore"
