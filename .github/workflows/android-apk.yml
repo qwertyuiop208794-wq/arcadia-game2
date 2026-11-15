@@ -26,19 +26,12 @@ jobs:
           test -n "$PROJECT_FILE"
           PROJECT_DIR="$(dirname "$PROJECT_FILE")"
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-          echo "=== PROJECT FILE TREE ==="
-          find "$PROJECT_DIR" -maxdepth 3 -type f | sort
-          echo "=== PROJECT SETTINGS ==="
-          sed -n '1,240p' "$PROJECT_DIR/project.godot"
-          echo "=== SCENE FILES ==="
-          find "$PROJECT_DIR" -maxdepth 3 -name '*.tscn' -type f -print -exec sed -n '1,220p' {} \;
-          echo "=== SCRIPT FILES ==="
-          find "$PROJECT_DIR" -maxdepth 3 -name '*.gd' -type f -print
-          for SCRIPT in "$PROJECT_DIR"/scripts/*.gd; do
-            [ -f "$SCRIPT" ] || continue
-            echo "=== SCRIPT: $SCRIPT ==="
-            sed -n '1,1400p' "$SCRIPT"
-          done
+          cp "$GITHUB_WORKSPACE/iran_game.gd" "$PROJECT_DIR/scripts/game.gd"
+          sed -i 's/config/name="آرکادیا"/config\/name="ایران"/' "$PROJECT_DIR/project.godot"
+          sed -i 's/package\/name="آرکادیا"/package\/name="ایران"/' "$PROJECT_DIR/export_presets.cfg"
+          sed -i 's/package\/unique_name="com.arcadia.realm"/package\/unique_name="com.iran.game"/' "$PROJECT_DIR/export_presets.cfg"
+          sed -i 's/^version\/code=.*/version\/code=2/' "$PROJECT_DIR/export_presets.cfg"
+          sed -i 's/^version\/name=.*/version\/name="1.0.0"/' "$PROJECT_DIR/export_presets.cfg"
           echo "=== Enable Android ETC2/ASTC texture import ==="
           if grep -q 'textures/vram_compression/import_etc2_astc=' "$PROJECT_DIR/project.godot"; then
             sed -i 's@textures/vram_compression/import_etc2_astc=.*@textures/vram_compression/import_etc2_astc=true@' "$PROJECT_DIR/project.godot"
