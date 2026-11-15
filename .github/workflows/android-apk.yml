@@ -2,34 +2,39 @@ name: Build Arcadia Android APK
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/android-apk.yml"
+      - ".build-trigger"
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.4.1
     steps:
-      - name: Download Android source
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Download and extract Android source
         run: |
-          curl -L "https://raw.githubusercontent.com/qwertyuiop208794-wq/arcadia-game2/main/Arcadia_Android_Source_Ready.zip" -o source.zip
+          curl -fL "https://raw.githubusercontent.com/qwertyuiop208794-wq/arcadia-game2/main/Arcadia_Android_Source_Ready.zip" -o source.zip
           mkdir source
           unzip -q source.zip -d source
-          find source -name project.godot -print
-      - name: Locate project and export
-        run: |
           PROJECT_FILE="$(find "$GITHUB_WORKSPACE/source" -name project.godot -print -quit)"
           test -n "$PROJECT_FILE"
           PROJECT_DIR="$(dirname "$PROJECT_FILE")"
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-      - name: Build with Godot Android export
-        uses: firebelley/godot-export@v6
-        with:
-          godot_executable_download_url: https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_linux.x86_64.zip
-          godot_export_templates_download_url: https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_export_templates.tpz
-          relative_project_path: ${{ env.PROJECT_DIR }}
-          export_preset: Android
-          archive_output: false
+          test -f "$PROJECT_DIR/export_presets.cfg"
+          grep -q 'name="Android"' "$PROJECT_DIR/export_presets.cfg"
+      - name: Import project and build APK
+        run: |
+          godot --headless --editor --path "$PROJECT_DIR" --import
+          godot --headless --path "$PROJECT_DIR" --export-debug "Android" "$GITHUB_WORKSPACE/Arcadia-debug.apk"
+          test -s "$GITHUB_WORKSPACE/Arcadia-debug.apk"
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Arcadia-Android-APK
-          path: ${{ env.PROJECT_DIR }}/build/*.apk
+          path: Arcadia-debug.apk
           if-no-files-found: error
