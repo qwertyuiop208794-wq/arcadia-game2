@@ -85,8 +85,13 @@ jobs:
           test -s "$TEMPLATE_DIR/android_debug.apk"
           test -s "$TEMPLATE_DIR/android_release.apk"
           ls -lh "$TEMPLATE_DIR/android_debug.apk" "$TEMPLATE_DIR/android_release.apk"
-          echo "=== Installing Android Gradle build template ==="
-          godot --headless --editor --path "$PROJECT_DIR" --install-android-build-template
+          echo "=== Android build-template files ==="
+          ls -lh "$TEMPLATE_DIR" | grep -E 'android|source' || true
+          if grep -q 'gradle_build/use_gradle_build=true' "$PROJECT_DIR/export_presets.cfg"; then
+            test -s "$TEMPLATE_DIR/android_source.zip"
+            mkdir -p "$PROJECT_DIR/android/build"
+            unzip -q -o "$TEMPLATE_DIR/android_source.zip" -d "$PROJECT_DIR/android/build"
+          fi
           echo "=== Android export configuration ==="
           grep -nE '^\\[preset|^name=|^platform=|gradle|custom_template|target_sdk|version/code|package/' "$PROJECT_DIR/export_presets.cfg" || true
           echo "=== Editor Android settings ==="
