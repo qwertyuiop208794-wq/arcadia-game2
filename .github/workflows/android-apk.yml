@@ -107,8 +107,14 @@ jobs:
 
       - name: Import project and build APK
         run: |
+          sed -i 's/^package\/signed=true$/package\/signed=false/' "$PROJECT_DIR/export_presets.cfg"
+          grep -n '^package/signed=' "$PROJECT_DIR/export_presets.cfg" || true
           godot --headless --editor --path "$PROJECT_DIR" --import
-          godot --headless --verbose --path "$PROJECT_DIR" --export-debug "Android" "$GITHUB_WORKSPACE/Arcadia-debug.apk"
+          godot --headless --verbose --path "$PROJECT_DIR" --export-debug "Android" "$GITHUB_WORKSPACE/Arcadia-unsigned.apk"
+          test -s "$GITHUB_WORKSPACE/Arcadia-unsigned.apk"
+          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -f -p 4 "$GITHUB_WORKSPACE/Arcadia-unsigned.apk" "$GITHUB_WORKSPACE/Arcadia-aligned.apk"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign --ks "$HOME/.android/debug.keystore" --ks-key-alias androiddebugkey --ks-pass pass:android --key-pass pass:android --out "$GITHUB_WORKSPACE/Arcadia-debug.apk" "$GITHUB_WORKSPACE/Arcadia-aligned.apk"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$GITHUB_WORKSPACE/Arcadia-debug.apk"
           test -s "$GITHUB_WORKSPACE/Arcadia-debug.apk"
           ls -lh "$GITHUB_WORKSPACE/Arcadia-debug.apk"
           file "$GITHUB_WORKSPACE/Arcadia-debug.apk" || true
