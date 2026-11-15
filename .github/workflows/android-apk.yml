@@ -92,8 +92,13 @@ jobs:
             mkdir -p "$PROJECT_DIR/android/build"
             unzip -q -o "$TEMPLATE_DIR/android_source.zip" -d "$PROJECT_DIR/android/build"
           fi
-          echo "=== Android export configuration ==="
-          grep -nE '^\\[preset|^name=|^platform=|gradle|custom_template|target_sdk|version/code|package/' "$PROJECT_DIR/export_presets.cfg" || true
+          echo "=== Android export preset (sensitive values removed) ==="
+          grep -v -Ei 'password|keystore.*user|keystore.*pass' "$PROJECT_DIR/export_presets.cfg"
+          echo "=== SDK build-tools and platform folders ==="
+          ls -1 "$ANDROID_HOME/build-tools" || true
+          ls -1 "$ANDROID_HOME/platforms" || true
+          echo "=== Android export settings loaded from Godot config ==="
+          cat "$HOME/.config/godot/editor_settings-4.4.tres"
           echo "=== Editor Android settings ==="
           grep -n 'export/android/' "$HOME/.config/godot/editor_settings-4.4.tres" || true
           test -x "$JAVA_HOME/bin/java"
