@@ -27,7 +27,7 @@ jobs:
           PROJECT_DIR="$(dirname "$PROJECT_FILE")"
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
           cp "$GITHUB_WORKSPACE/iran_game.gd" "$PROJECT_DIR/scripts/game.gd"
-          sed -i 's/config/name="آرکادیا"/config\/name="ایران"/' "$PROJECT_DIR/project.godot"
+          sed -i 's@config/name="آرکادیا"@config/name="ایران"@' "$PROJECT_DIR/project.godot"
           sed -i 's/package\/name="آرکادیا"/package\/name="ایران"/' "$PROJECT_DIR/export_presets.cfg"
           sed -i 's/package\/unique_name="com.arcadia.realm"/package\/unique_name="com.iran.game"/' "$PROJECT_DIR/export_presets.cfg"
           sed -i 's/^version\/code=.*/version\/code=2/' "$PROJECT_DIR/export_presets.cfg"
