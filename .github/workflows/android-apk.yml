@@ -16,28 +16,95 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Extract Android source
+
+      - name: Extract and repair Android source
         run: |
           test -f Arcadia_Android_Source_Ready.zip
           mkdir -p source
           unzip -q Arcadia_Android_Source_Ready.zip -d source
-          echo "=== Project files ==="
-          find source -maxdepth 4 -name project.godot -print
           PROJECT_FILE="$(find "$GITHUB_WORKSPACE/source" -name project.godot -print -quit)"
           test -n "$PROJECT_FILE"
           PROJECT_DIR="$(dirname "$PROJECT_FILE")"
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-          echo "=== Export presets ==="
+          echo "=== GDScript join calls before repair ==="
+          grep -R -n '\.join(' "$PROJECT_DIR/scripts" || true
+          python3 - "$PROJECT_DIR/scripts/game.gd" <<'PY'
+          import re, sys
+          from pathlib import Path
+          path = Path(sys.argv[1])
+          source = path.read_text(encoding="utf-8")
+          pattern = re.compile(r"(?P<array>\b[A-Za-z_]\w*)\.join\((?P<quote>['\"])(?P<separator>.*?)(?P=quote)\)")
+          def fix(match):
+              return f"{match.group('quote')}{match.group('separator')}{match.group('quote')}.join({match.group('array')})"
+          fixed, count = pattern.subn(fix, source)
+          print(f"Corrected PackedStringArray.join calls: {count}")
+          if count < 1:
+              raise SystemExit("Expected incompatible PackedStringArray.join call was not found")
+          path.write_text(fixed, encoding="utf-8")
+          PY
+          echo "=== Export preset ==="
           test -f "$PROJECT_DIR/export_presets.cfg"
-          grep -n 'Android' "$PROJECT_DIR/export_presets.cfg" | head -20
+          grep -nE '^\[preset|^name=|^platform=|target_sdk|version/code' "$PROJECT_DIR/export_presets.cfg" || true
           echo "=== Godot version ==="
           godot --version
+
+      - name: Install Java and Android export prerequisites
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends openjdk-17-jdk-headless unzip
+          export JAVA_HOME="$(dirname "$(dirname "$(readlink -f "$(command -v javac)")")")"
+          export ANDROID_HOME=/usr/lib/android-sdk
+          export ANDROID_SDK_ROOT="$ANDROID_HOME"
+          export PATH="$JAVA_HOME/bin:$ANDROID_HOME/cmdline-tools/cmdline-tools/bin:$ANDROID_HOME/platform-tools:$PATH"
+          SDKMANAGER="$(command -v sdkmanager || find "$ANDROID_HOME" -name sdkmanager -type f -print -quit)"
+          test -n "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-33" "build-tools;33.0.2"
+          mkdir -p "$HOME/.android"
+          keytool -genkeypair -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -dname "CN=Android Debug,O=Android,C=US" -validity 10000 -keyalg RSA -keysize 2048 -noprompt
+          mkdir -p "$HOME/.config/godot"
+          cat > "$HOME/.config/godot/editor_settings-4.tres" <<EOF
+          [gd_resource type="EditorSettings" format=3]
+          [resource]
+          export/android/java_sdk_path = "$JAVA_HOME"
+          export/android/android_sdk_path = "$ANDROID_HOME"
+          export/android/debug_keystore = "$HOME/.android/debug.keystore"
+          export/android/debug_keystore_user = "androiddebugkey"
+          export/android/debug_keystore_pass = "android"
+          EOF
+          echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "PATH=$JAVA_HOME/bin:$ANDROID_HOME/cmdline-tools/cmdline-tools/bin:$ANDROID_HOME/platform-tools:$PATH" >> "$GITHUB_ENV"
+          java -version
+          "$SDKMANAGER" --list_installed | head -40
+
+      - name: Install Godot 4.4.1 export templates
+        run: |
+          python3 - <<'PY'
+          import urllib.request
+          url = "https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_export_templates.tpz"
+          urllib.request.urlretrieve(url, "/tmp/godot-templates.tpz")
+          PY
+          TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/4.4.1.stable"
+          mkdir -p "$TEMPLATE_DIR"
+          unzip -q -o /tmp/godot-templates.tpz -d "$TEMPLATE_DIR"
+          if [ -d "$TEMPLATE_DIR/templates" ]; then
+            cp -a "$TEMPLATE_DIR/templates/." "$TEMPLATE_DIR/"
+            rm -rf "$TEMPLATE_DIR/templates"
+          fi
+          test -s "$TEMPLATE_DIR/android_debug.apk"
+          test -s "$TEMPLATE_DIR/android_release.apk"
+          ls -lh "$TEMPLATE_DIR/android_debug.apk" "$TEMPLATE_DIR/android_release.apk"
+
       - name: Import project and build APK
         run: |
           godot --headless --editor --path "$PROJECT_DIR" --import
           godot --headless --path "$PROJECT_DIR" --export-debug "Android" "$GITHUB_WORKSPACE/Arcadia-debug.apk"
           test -s "$GITHUB_WORKSPACE/Arcadia-debug.apk"
           ls -lh "$GITHUB_WORKSPACE/Arcadia-debug.apk"
+          file "$GITHUB_WORKSPACE/Arcadia-debug.apk" || true
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
