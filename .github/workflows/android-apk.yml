@@ -48,7 +48,7 @@ jobs:
           SDKMANAGER="$(command -v sdkmanager || find "$ANDROID_HOME" -name sdkmanager -type f -print -quit)"
           test -n "$SDKMANAGER"
           yes | "$SDKMANAGER" --licenses || true
-          "$SDKMANAGER" "platform-tools" "platforms;android-33" "build-tools;33.0.2"
+          "$SDKMANAGER" "platform-tools" "platforms;android-33" "platforms;android-35" "build-tools;33.0.2" "build-tools;35.0.0"
           mkdir -p "$HOME/.android"
           keytool -genkeypair -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -dname "CN=Android Debug,O=Android,C=US" -validity 10000 -keyalg RSA -keysize 2048 -noprompt
           mkdir -p "$HOME/.config/godot"
@@ -85,11 +85,20 @@ jobs:
           test -s "$TEMPLATE_DIR/android_debug.apk"
           test -s "$TEMPLATE_DIR/android_release.apk"
           ls -lh "$TEMPLATE_DIR/android_debug.apk" "$TEMPLATE_DIR/android_release.apk"
+          echo "=== Installing Android Gradle build template ==="
+          godot --headless --editor --path "$PROJECT_DIR" --install-android-build-template
+          echo "=== Android export configuration ==="
+          grep -nE '^\\[preset|^name=|^platform=|gradle|custom_template|target_sdk|version/code|package/' "$PROJECT_DIR/export_presets.cfg" || true
+          echo "=== Editor Android settings ==="
+          grep -n 'export/android/' "$HOME/.config/godot/editor_settings-4.tres" || true
+          test -x "$JAVA_HOME/bin/java"
+          test -d "$ANDROID_HOME/platforms/android-35"
+          test -s "$HOME/.android/debug.keystore"
 
       - name: Import project and build APK
         run: |
           godot --headless --editor --path "$PROJECT_DIR" --import
-          godot --headless --path "$PROJECT_DIR" --export-debug "Android" "$GITHUB_WORKSPACE/Arcadia-debug.apk"
+          godot --headless --verbose --path "$PROJECT_DIR" --export-debug "Android" "$GITHUB_WORKSPACE/Arcadia-debug.apk"
           test -s "$GITHUB_WORKSPACE/Arcadia-debug.apk"
           ls -lh "$GITHUB_WORKSPACE/Arcadia-debug.apk"
           file "$GITHUB_WORKSPACE/Arcadia-debug.apk" || true
