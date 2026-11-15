@@ -27,9 +27,15 @@ jobs:
           PROJECT_DIR="$(dirname "$PROJECT_FILE")"
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
           echo "=== Enable Android ETC2/ASTC texture import ==="
-          if grep -q '^textures/vram_compression/import_etc2_astc=' "$PROJECT_DIR/project.godot"; then
-            sed -i 's@^textures/vram_compression/import_etc2_astc=.*@textures/vram_compression/import_etc2_astc=true@' "$PROJECT_DIR/project.godot"
-          elif grep -q '^\\[rendering\\]          grep -R -n '\.join(' "$PROJECT_DIR/scripts" || true
+          if grep -q 'textures/vram_compression/import_etc2_astc=' "$PROJECT_DIR/project.godot"; then
+            sed -i 's@textures/vram_compression/import_etc2_astc=.*@textures/vram_compression/import_etc2_astc=true@' "$PROJECT_DIR/project.godot"
+          elif grep -q '^\[rendering\]$' "$PROJECT_DIR/project.godot"; then
+            sed -i '/^\[rendering\]$/a textures/vram_compression/import_etc2_astc=true' "$PROJECT_DIR/project.godot"
+          else
+            printf '\n[rendering]\ntextures/vram_compression/import_etc2_astc=true\n' >> "$PROJECT_DIR/project.godot"
+          fi
+          grep -n 'import_etc2_astc' "$PROJECT_DIR/project.godot"
+          grep -R -n '\.join(' "$PROJECT_DIR/scripts" || true
           sed -i '682s@.*@	return "  •  ".join(PackedStringArray(parts))@' "$PROJECT_DIR/scripts/game.gd"
           echo "=== Corrected line ==="
           sed -n '680,684p' "$PROJECT_DIR/scripts/game.gd"
