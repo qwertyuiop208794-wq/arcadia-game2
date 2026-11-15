@@ -16,22 +16,28 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Download and extract Android source
+      - name: Extract Android source
         run: |
-          curl -fL "https://raw.githubusercontent.com/qwertyuiop208794-wq/arcadia-game2/main/Arcadia_Android_Source_Ready.zip" -o source.zip
-          mkdir source
-          unzip -q source.zip -d source
+          test -f Arcadia_Android_Source_Ready.zip
+          mkdir -p source
+          unzip -q Arcadia_Android_Source_Ready.zip -d source
+          echo "=== Project files ==="
+          find source -maxdepth 4 -name project.godot -print
           PROJECT_FILE="$(find "$GITHUB_WORKSPACE/source" -name project.godot -print -quit)"
           test -n "$PROJECT_FILE"
           PROJECT_DIR="$(dirname "$PROJECT_FILE")"
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          echo "=== Export presets ==="
           test -f "$PROJECT_DIR/export_presets.cfg"
-          grep -q 'name="Android"' "$PROJECT_DIR/export_presets.cfg"
+          grep -n 'Android' "$PROJECT_DIR/export_presets.cfg" | head -20
+          echo "=== Godot version ==="
+          godot --version
       - name: Import project and build APK
         run: |
           godot --headless --editor --path "$PROJECT_DIR" --import
           godot --headless --path "$PROJECT_DIR" --export-debug "Android" "$GITHUB_WORKSPACE/Arcadia-debug.apk"
           test -s "$GITHUB_WORKSPACE/Arcadia-debug.apk"
+          ls -lh "$GITHUB_WORKSPACE/Arcadia-debug.apk"
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
