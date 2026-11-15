@@ -117,47 +117,256 @@ func _draw_game(s: Vector2) -> void:
  _center("پیشرفت ذخیره می‌شود",s.y-18,12,C.muted)
 
 func _draw_minigame_board(s: Vector2) -> void:
- var center := Vector2(s.x*0.5,s.y*0.53)
- var radius := minf(s.x*0.31,s.y*0.18)
- match active_game % 6:
+ var c:=Vector2(s.x*0.5,s.y*0.53)
+ match active_game:
   0:
-   for i in range(5):
-    var p := center+Vector2(cos(i*TAU/5.0),sin(i*TAU/5.0))*radius
-    draw_circle(p,23,C.gold if i==puzzle_rotation%5 else C.panel2)
-    _center_at(str(i+1),p,17,C.bg if i==puzzle_rotation%5 else C.white)
-   _center("دایره درست را انتخاب کن",center.y+radius+34,14,C.muted)
-  1:
-   for i in range(4):
-    var r:=Rect2(center.x-132+(i%2)*138,center.y-64+(i/2)*70,124,56)
-    _button(r,["آب","برق","خوراک","هزینه"][i],C.panel2)
-  2:
+   draw_circle(c,95,C.panel)
+   draw_arc(c,80,0,TAU,64,C.gold,3)
    for i in range(6):
-    var x:=center.x-150+(i%3)*104
-    var y:=center.y-64+(i/3)*78
-    _button(Rect2(x,y,92,62),str((i+1)*7+task_index),C.panel2)
+    var p:=c+Vector2(cos(i*TAU/6.0),sin(i*TAU/6.0))*80
+    draw_circle(p,22,C.gold if i==puzzle_rotation%6 else C.panel2)
+    _center_at(str(i+1),p,16,C.bg if i==puzzle_rotation%6 else C.white)
+   _center("صفحه رمز گاوصندوق",c.y+122,13,C.muted)
+  1:
+   _center("فهرست هزینه‌های امروز",c.y-90,15,C.muted)
+   for i in range(4):
+    var r:=Rect2(c.x-135+(i%2)*140,c.y-65+int(i/2)*78,125,64)
+    _button(r,["سفر لوکس","رستوران","پوشاک","تفریح"][i],C.panel2)
+  2:
+   draw_line(Vector2(c.x-130,c.y-20),Vector2(c.x+130,c.y-20),C.gold,4)
+   draw_line(Vector2(c.x,c.y-22),Vector2(c.x,c.y+48),C.gold,3)
+   _center_at("درآمد",Vector2(c.x-78,c.y+12),16,C.white)
+   _center_at("هزینه",Vector2(c.x+78,c.y+12),16,C.white)
+   for i in range(3): _button(Rect2(c.x-145+i*100,c.y+72,88,50),str((i+1)*25+task_index),C.panel2)
   3:
+   _center("اولویت منابع بحران",c.y-90,15,C.muted)
    for i in range(3):
-    var r:=Rect2(center.x-148+i*104,center.y-35,92,92)
-    draw_rect(r,C.panel2)
-    _center_at(["●","◆","▲"][posmod(i+puzzle_rotation,3)],r.get_center(),30,C.gold)
+    var x:=c.x-122+i*122
+    draw_rect(Rect2(x,c.y-52,82,125),C.panel2)
+    draw_rect(Rect2(x+14,c.y+25,54,25),[C.blue,C.red,C.gold][i])
+    _center_at(["آب","دارو","برق"][i],Vector2(x+41,c.y-15),16,C.white)
   4:
-   for i in range(5):
-    var x:=center.x-160+i*78
-    draw_rect(Rect2(x,center.y-24,62,48),C.panel2)
-    draw_circle(Vector2(x+31,center.y),11,C.gold if i==posmod(puzzle_rotation,5) else C.blue)
+   _center("پرونده مدارک",c.y-90,15,C.muted)
+   for i in range(4):
+    var x:=c.x-150+i*100
+    draw_rect(Rect2(x,c.y-60,88,132),C.panel2)
+    draw_rect(Rect2(x+12,c.y-42,64,7),C.gold)
+    for k in range(3): draw_line(Vector2(x+12,c.y-18+k*22),Vector2(x+70,c.y-18+k*22),C.muted,2)
+    _center_at(["هویت","درآمد","نشانی","درخواست"][i],Vector2(x+44,c.y+53),12,C.white)
   5:
+   _center("مسیر آب را وصل کن",c.y-90,15,C.muted)
+   for y in range(3):
+    for x in range(3):
+     var p:=Vector2(c.x-92+x*92,c.y-35+y*70)
+     draw_rect(Rect2(p-Vector2(29,25),Vector2(58,50)),C.panel2)
+     if posmod(x+y+puzzle_rotation,2)==0: draw_line(p-Vector2(21,0),p+Vector2(21,0),C.blue,7)
+     else: draw_line(p-Vector2(0,21),p+Vector2(0,21),C.blue,7)
+     draw_circle(p,6,C.gold)
+  6:
+   _center("پنل طبقات آسانسور",c.y-100,15,C.muted)
+   for i in range(6): _button(Rect2(c.x-103+(i%2)*110,c.y-67+int(i/2)*55,90,46),"طبقه "+str(i+1),C.panel2)
+   draw_rect(Rect2(c.x+125,c.y-45,35,105),C.panel)
+   _center_at("↑",Vector2(c.x+142,c.y+7),24,C.gold)
+  7:
+   _center("قطعه معیوب را پیدا کن",c.y-90,15,C.muted)
+   for i in range(4):
+    var p:=Vector2(c.x-150+i*100,c.y-2)
+    draw_circle(p,34,C.panel2)
+    _center_at(["⚙","🔧","🔌","🔩"][i],p,26,C.gold)
+    _center_at(["لوله","کلید","سیم","شیر"][i],p+Vector2(0,55),12,C.white)
+  8:
+   _center("اسناد محموله گمرکی",c.y-90,15,C.muted)
    for i in range(3):
-    var x:=center.x-115+i*115
-    draw_circle(Vector2(x,center.y),36,C.panel2)
-    _center_at(["۱","۲","۳"][i],Vector2(x,center.y),22,C.gold)
+    var x:=c.x-145+i*145
+    draw_rect(Rect2(x,c.y-50,118,110),C.panel2)
+    draw_rect(Rect2(x+16,c.y-31,86,55),C.bg)
+    _center_at(["بارنامه","گواهی","فاکتور"][i],Vector2(x+59,c.y+42),13,C.white)
+  9:
+   _center("هدایت خودرو به جای پارک",c.y-95,15,C.muted)
+   for i in range(3):
+    var x:=c.x-145+i*145
+    draw_rect(Rect2(x,c.y-55,112,145),C.panel2)
+    draw_rect(Rect2(x+25,c.y-10,62,34),C.gold if i==puzzle_rotation%3 else C.blue)
+    draw_circle(Vector2(x+36,c.y+25),7,C.bg)
+    draw_circle(Vector2(x+76,c.y+25),7,C.bg)
+    _center_at("P"+str(i+1),Vector2(x+56,c.y+63),15,C.white)
+  10:
+   _center("نوار نقاله کارخانه",c.y-95,15,C.muted)
+   draw_line(Vector2(c.x-165,c.y+5),Vector2(c.x+165,c.y+5),C.muted,9)
+   for i in range(4):
+    var p:=Vector2(c.x-126+i*84,c.y+5)
+    draw_rect(Rect2(p-Vector2(25,28),Vector2(50,56)),C.panel2)
+    _center_at(str(i+1),p,22,C.gold)
+  11:
+   _center("جلسه هیئت‌مدیره",c.y-95,15,C.muted)
+   draw_rect(Rect2(c.x-145,c.y-40,290,120),C.panel2)
+   for i in range(4):
+    var p:=Vector2(c.x-108+(i%2)*216,c.y-58+int(i/2)*155)
+    draw_circle(p,20,C.gold if i==puzzle_rotation%4 else C.blue)
+    _center_at(["مالی","فروش","تولید","منابع"][i],p+Vector2(0,32),12,C.white)
+  12:
+   _center("خط کد دارای باگ را پیدا کن",c.y-95,15,C.muted)
+   for i in range(4):
+    var y:=c.y-60+i*40
+    draw_rect(Rect2(c.x-160,y,320,32),C.panel2 if i!=puzzle_rotation%4 else Color("#563b37"))
+    _center_at("0"+str(i+1)+"  "+["if balance > 0:","amount = total / count","while stock > 0:","return result"][i],Vector2(c.x,y+1),12,C.white)
+  13:
+   _center("قفسه‌بندی فروشگاه",c.y-95,15,C.muted)
+   for row in range(2):
+    draw_line(Vector2(c.x-160,c.y-12+row*82),Vector2(c.x+160,c.y-12+row*82),C.gold,4)
+    for col in range(4):
+     draw_rect(Rect2(c.x-132+col*86,c.y-55+row*82,58,38),[C.blue,C.green,C.gold,C.red][posmod(col+row,4)])
+  14:
+   _center("جدول برنامه شیفت",c.y-95,15,C.muted)
+   for i in range(3):
+    var x:=c.x-150+i*105
+    draw_rect(Rect2(x,c.y-55,94,130),C.panel2)
+    _center_at(["صبح","عصر","شب"][i],Vector2(x+47,c.y-25),15,C.gold)
+    for j in range(3): draw_rect(Rect2(x+12,c.y+j*34,70,25),C.blue if j==puzzle_rotation%3 else C.bg)
+  15:
+   _center("سبد دارایی و ریسک",c.y-95,15,C.muted)
+   for i in range(4):
+    var y:=c.y-55+i*34
+    _center_at(["نقد","سهام","طلا","اوراق"][i],Vector2(c.x-120,y+9),13,C.white)
+    draw_rect(Rect2(c.x-70,y,210,18),C.panel2)
+    draw_rect(Rect2(c.x-70,y,210*[0.65,0.85,0.48,0.95][i],18),C.green if i==puzzle_rotation%4 else C.blue)
+  16:
+   _center("برگه کسورات حقوق",c.y-95,15,C.muted)
+   draw_rect(Rect2(c.x-135,c.y-65,270,155),C.panel2)
+   _center("حقوق پایه + مزایا",c.y-25,14,C.white)
+   _center("مالیات − بیمه",c.y+12,14,C.muted)
+   _center("خالص پرداختی = ؟",c.y+58,18,C.gold)
+  17:
+   _center("سبد خرید و بودجه",c.y-95,15,C.muted)
+   for i in range(4):
+    var x:=c.x-155+i*82
+    draw_rect(Rect2(x,c.y-55,68,124),C.panel2)
+    draw_circle(Vector2(x+34,c.y-19),17,[C.red,C.green,C.gold,C.blue][i])
+    _center_at(["نان","شیر","میوه","برنج"][i],Vector2(x+34,c.y+23),12,C.white)
+    _center_at(str((i+1)*15)+"k",Vector2(x+34,c.y+48),11,C.gold)
+  18:
+   _center("توپولوژی شبکه",c.y-95,15,C.muted)
+   var nodes:=[Vector2(-125,-10),Vector2(-42,-45),Vector2(48,-45),Vector2(126,0),Vector2(0,48)]
+   for i in range(nodes.size()-1): draw_line(c+nodes[i],c+nodes[i+1],C.blue,4)
+   for i in range(nodes.size()):
+    draw_circle(c+nodes[i],18,C.gold if i==puzzle_rotation%nodes.size() else C.panel2)
+    _center_at(str(i+1),c+nodes[i],14,C.white)
+  19:
+   _center("زاویه آنتن؛ با کشیدن تنظیم کن",c.y-95,14,C.muted)
+   draw_circle(c,74,C.panel2)
+   draw_arc(c,66,0,TAU,48,C.gold,3)
+   var angle:=float(puzzle_rotation%8)*PI/4.0
+   draw_line(c,c+Vector2(cos(angle),sin(angle))*62,C.blue,8)
+   draw_circle(c,10,C.gold)
+  20:
+   _center("انتخاب بسته اینترنت",c.y-95,15,C.muted)
+   for i in range(3):
+    var x:=c.x-150+i*150
+    draw_rect(Rect2(x,c.y-60,122,135),C.panel2)
+    _center_at(["روزانه","هفتگی","ماهانه"][i],Vector2(x+61,c.y-23),16,C.white)
+    _center_at(["۲ گیگ","۱۰ گیگ","۳۰ گیگ"][i],Vector2(x+61,c.y+18),15,C.gold)
+    _center_at("طرح "+str(i+1),Vector2(x+61,c.y+53),12,C.muted)
+  21:
+   _center("قطعات فایل دانلود",c.y-95,15,C.muted)
+   for i in range(5):
+    var x:=c.x-160+i*66
+    draw_rect(Rect2(x,c.y-35,56,80),C.panel2)
+    draw_rect(Rect2(x+9,c.y-20,38,30),C.blue if i==puzzle_rotation%5 else C.bg)
+    _center_at("قطعه "+str(i+1),Vector2(x+28,c.y+32),10,C.white)
+  22:
+   _center("دنباله منطقی را کامل کن",c.y-95,15,C.muted)
+   for i in range(4):
+    var p:=Vector2(c.x-135+i*90,c.y+5)
+    draw_circle(p,27,C.panel2)
+    _center_at(["●","◆","▲","?"][i],p,22,C.gold)
+   _center("ترتیب را بررسی کن",c.y+65,13,C.muted)
+  23:
+   _center("محاسبه زمان‌دار",c.y-95,15,C.muted)
+   draw_rect(Rect2(c.x-115,c.y-60,230,50),C.panel2)
+   _center("(%d + %d) × ۲" % [task_index+4,round_no+2],c.y-28,23,C.gold)
+   for i in range(4): _button(Rect2(c.x-150+i*100,c.y+12,88,52),str((i+1)*8+task_index),C.panel2)
+  24:
+   _center("کارت‌های حافظه",c.y-95,15,C.muted)
+   for i in range(6):
+    var r:=Rect2(c.x-132+(i%3)*92,c.y-55+int(i/3)*75,78,62)
+    draw_rect(r,C.panel2)
+    _center_at("؟" if i!=puzzle_rotation%6 else ["★","◆","●","▲","✦","♥"][i],r.get_center(),24,C.gold)
+  25:
+   _center("هزارتو؛ مسیر خروج را بکش",c.y-95,15,C.muted)
+   for row in range(4):
+    for col in range(5):
+     var x:=c.x-100+col*40
+     var y:=c.y-55+row*40
+     draw_rect(Rect2(x,y,36,36),C.panel2 if posmod(row*2+col+puzzle_rotation,4)!=0 else C.bg)
+   _center("ورود  →  خروج",c.y+120,13,C.gold)
+  26:
+   _center("مسابقه انتخاب استایل",c.y-95,15,C.muted)
+   for i in range(3):
+    var x:=c.x-145+i*145
+    draw_rect(Rect2(x,c.y-60,116,145),C.panel2)
+    draw_circle(Vector2(x+58,c.y-20),20,C.gold)
+    draw_rect(Rect2(x+38,c.y+5,40,65),[C.blue,C.green,C.red][i])
+    _center_at(["کلاسیک","رسمی","مدرن"][i],Vector2(x+58,c.y+84),13,C.white)
+  27:
+   _center("اجزای قرینه چهره",c.y-95,15,C.muted)
+   draw_circle(c,70,Color("#b88d77"))
+   draw_line(Vector2(c.x,c.y-70),Vector2(c.x,c.y+70),C.gold,2)
+   for i in range(2):
+    var x:=c.x+(-1 if i==0 else 1)*(25+((puzzle_rotation+i)%3)*5)
+    draw_circle(Vector2(x,c.y-18),9,C.white)
+    draw_arc(Vector2(x,c.y+12),20,0,PI,24,C.bg,3)
+  28:
+   _center("استودیوی عکاسی",c.y-95,15,C.muted)
+   draw_rect(Rect2(c.x-145,c.y-48,290,150),C.panel2,false,4)
+   draw_rect(Rect2(c.x-90,c.y-18,180,100),C.bg,false,2)
+   draw_circle(c,27,C.gold)
+   draw_circle(c,12,C.blue)
+   draw_circle(Vector2(c.x-115,c.y-20),11,C.white)
+   draw_circle(Vector2(c.x+115,c.y-20),11,C.white)
+  29:
+   _center("ترکیب نهایی لباس",c.y-95,15,C.muted)
+   var colors:=[C.blue,C.gold,C.green,C.red]
+   for i in range(4):
+    var x:=c.x-150+i*100
+    draw_rect(Rect2(x,c.y-55,86,130),C.panel2)
+    draw_circle(Vector2(x+43,c.y-25),15,Color("#b88d77"))
+    draw_rect(Rect2(x+23,c.y-5,40,60),colors[posmod(i+puzzle_rotation,4)])
+    _center_at(["بالاپوش","شلوار","کفش","اکسسوری"][i],Vector2(x+43,c.y+58),11,C.white)
+  _:
+   _center("مأموریت اختصاصی",c.y,18,C.gold)
 
 func _action_label() -> String:
- match active_game % 6:
-  0: return "چرخاندن قفل / انتخاب قطعه"
-  1: return "برداشتن و دسته‌بندی"
-  2: return "انتخاب و مرتب‌سازی"
-  3: return "اتصال قطعات"
-  4: return "جابجایی و مونتاژ"
+ match active_game:
+  0: return "چرخاندن رمز گاوصندوق"
+  1: return "ثبت هزینه لوکس"
+  2: return "تراز کردن حساب"
+  3: return "تخصیص منابع بحران"
+  4: return "ارسال مدرک"
+  5: return "وصل کردن لوله‌ها"
+  6: return "انتخاب طبقه آسانسور"
+  7: return "تعویض قطعه خراب"
+  8: return "تطبیق سند گمرکی"
+  9: return "هدایت و پارک خودرو"
+  10: return "مونتاژ قطعه بعدی"
+  11: return "ثبت تصمیم جلسه"
+  12: return "اصلاح خط معیوب"
+  13: return "چیدن کالا در قفسه"
+  14: return "تکمیل برنامه شیفت"
+  15: return "تنظیم سبد دارایی"
+  16: return "ثبت کسورات"
+  17: return "تکمیل سبد خرید"
+  18: return "اتصال گره شبکه"
+  19: return "تنظیم آنتن"
+  20: return "انتخاب بسته اینترنت"
+  21: return "بازیابی قطعه فایل"
+  22: return "تکمیل الگوی منطقی"
+  23: return "ثبت پاسخ محاسبه"
+  24: return "جفت‌کردن کارت‌ها"
+  25: return "حرکت در هزارتو"
+  26: return "انتخاب پوشش مدل"
+  27: return "تنظیم تقارن"
+  28: return "تنظیم نور دوربین"
+  29: return "تکمیل تغییر استایل"
   _: return "انجام حرکت بعدی"
 
 func _draw_admin(s: Vector2) -> void:
@@ -322,8 +531,15 @@ func _tap(p:Vector2,travel:float)->void:
   if p.y>s.y*0.69 and p.y<s.y*0.84:
    _advance_game()
   elif p.y>s.y*0.38 and p.y<s.y*0.69:
-   puzzle_rotation=(puzzle_rotation+1)%5
-   _advance_game()
+   if active_game in [5,9,18,19,25,27,28,29]:
+    if travel>=28.0:
+     puzzle_rotation=posmod(puzzle_rotation+1,8)
+     _advance_game()
+    else:
+     _notify("برای این بازی حرکت را بکش")
+   else:
+    puzzle_rotation=posmod(puzzle_rotation+1,8)
+    _advance_game()
   _save()
  elif screen=="admin":
   if p.y>s.y-100 and p.x<170:
@@ -405,8 +621,9 @@ func _advance_game()->void:
   progress=0
   round_no+=1
   task_index+=1
-  target+=target*2
-  puzzle_rotation=rng.randi_range(0,4)
+  var difficulty_growth:float=[0.6,1.0,1.6][clampi(int(settings.get("difficulty",1)),0,2)]
+  target+=maxi(50,int(float(target)*difficulty_growth))
+  puzzle_rotation=rng.randi_range(0,7)
   _notify("مأموریت تازه: "+GAME_HINTS[active_game])
  elif total_actions%25==0:
   target+=int(target*0.15)
