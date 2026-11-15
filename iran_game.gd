@@ -34,9 +34,15 @@ var toast := ""
 var toast_timer := 0.0
 var admin_open := false
 var admin_unlocked := false
-var admin_pin := "2468"
+var admin_pin := ""
 var admin_text := ""
+var admin_changing_pin := false
 var ending_video := ""
+var settings := {
+ "music": true, "effects": true, "volume": 80,
+ "animation_speed": 1, "difficulty": 1,
+ "visual_effects": true, "theme": 0, "auto_save": true
+}
 var completed_choices: Array = []
 var config := ConfigFile.new()
 var rng := RandomNumberGenerator.new()
@@ -47,18 +53,22 @@ func _ready() -> void:
  get_viewport().size_changed.connect(queue_redraw)
  screen = "splash"
  splash_time = 2.8
+ _apply_audio_settings()
  queue_redraw()
 
 func _process(delta: float) -> void:
  if screen == "splash":
-  splash_time -= delta
+  splash_time -= delta * _animation_multiplier()
   if splash_time <= 0.0: screen = "home"
- if toast_timer > 0.0: toast_timer -= delta
+ if toast_timer > 0.0: toast_timer -= delta * _animation_multiplier()
  queue_redraw()
 
 func _draw() -> void:
  var s := get_viewport_rect().size
- draw_rect(Rect2(Vector2.ZERO,s),C.bg)
+ draw_rect(Rect2(Vector2.ZERO,s),_background_color())
+ if bool(settings.get("visual_effects",true)):
+  draw_circle(Vector2(s.x*0.08,s.y*0.18),s.x*0.12,Color(0.91,0.74,0.44,0.035))
+  draw_circle(Vector2(s.x*0.94,s.y*0.78),s.x*0.18,Color(0.44,0.66,0.78,0.035))
  if screen == "splash":
   _center("ایران",s.y*0.40,52,C.gold)
   _center("ساخته شده توسط",s.y*0.51,18,C.muted)
@@ -151,18 +161,84 @@ func _action_label() -> String:
   _: return "انجام حرکت بعدی"
 
 func _draw_admin(s: Vector2) -> void:
- _header("پنل سازنده","تنظیمات بازی ایران")
+ _header("پنل سازنده","تنظیمات محلی و آفلاین")
  if not admin_unlocked:
-  _center("رمز پنل سازنده را وارد کن",s.y*0.28,20,C.white)
-  _center("رمز پیش‌فرض: 2468",s.y*0.35,15,C.muted)
-  _button(Rect2(s.x*0.2,s.y*0.44,s.x*0.6,62),admin_text if admin_text!="" else "ورود",C.panel2)
+  var prompt := "یک رمز ۶ رقمی برای پنل بساز" if admin_pin == "" or admin_changing_pin else "رمز ۶ رقمی پنل را وارد کن"
+  _center(prompt,s.y*0.25,19,C.white)
+  _center("●".repeat(admin_text.length()),s.y*0.34,24,C.gold)
+  var keys := ["1","2","3","4","5","6","7","8","9","پاک","0","تأیید"]
+  var key_w := s.x*0.22
+  var key_h := minf(48.0,s.y*0.07)
+  for i in range(keys.size()):
+   var col := i%3
+   var row := int(i/3)
+   var r := Rect2(s.x*(0.5+(col-1)*0.25)-key_w*0.5,s.y*0.41+row*(key_h+7),key_w,key_h)
+   _button(r,keys[i],C.panel2 if i != 11 else C.gold)
  else:
-  _center("مرحله فعال: %d از ۸" % (stage+1),s.y*0.25,19,C.white)
-  _button(Rect2(s.x*0.1,s.y*0.32,s.x*0.8,52),"مرحله بعد / قبلی",C.panel2)
-  _button(Rect2(s.x*0.1,s.y*0.42,s.x*0.8,52),"تغییر رمز پنل",C.panel2)
-  _button(Rect2(s.x*0.1,s.y*0.52,s.x*0.8,52),"انتخاب ویدیوی پایانی",C.panel2)
-  _center("ویدیو: "+(ending_video if ending_video!="" else "انتخاب نشده"),s.y*0.65,13,C.muted)
+  _center("وضعیت بازی",s.y*0.17,17,C.muted)
+  var step := minf(60.0,s.y*0.085)
+  var row_h := minf(48.0,s.y*0.068)
+  var y0 := s.y*0.21
+  var labels := [
+   "موسیقی: "+("روشن" if settings["music"] else "خاموش"),
+   "افکت‌ها: "+("روشن" if settings["effects"] else "خاموش"),
+   "صدای کلی: %d٪" % int(settings["volume"]),
+   "سرعت انیمیشن: "+_animation_label(),
+   "سختی: "+_difficulty_label(),
+   "جلوه‌ها: "+("روشن" if settings["visual_effects"] else "خاموش"),
+   "پس‌زمینه: "+_theme_label(),
+   "ذخیره خودکار: "+("روشن" if settings["auto_save"] else "خاموش"),
+   "تغییر رمز پنل",
+   "شروع دوباره بازی",
+   "ذخیره همین حالا",
+   "ویدیوی پایانی: فعلاً خالی"
+  ]
+  for i in range(labels.size()):
+   var col := i%2
+   var row := int(i/2)
+   var x := s.x*(0.06 if col == 0 else 0.52)
+   _button(Rect2(x,y0+row*step,s.x*0.42,row_h),labels[i],C.panel2 if i != 11 else Color("#34414a"))
+  var percent := int(round(float(stage+(1 if screen=="ending" else 0))*100.0/8.0))
+  _center("پیشرفت: %d٪  |  عملیات: %d" % [percent,total_actions],s.y*0.79,14,C.gold)
+  _center("مرحله فعلی: %d از ۸" % (stage+1),s.y*0.84,13,C.muted)
  _button(Rect2(20,s.y-76,116,48),"بازگشت",C.panel)
+
+func _admin_key_at(p:Vector2,s:Vector2)->String:
+ var keys := ["1","2","3","4","5","6","7","8","9","پاک","0","تأیید"]
+ var key_w := s.x*0.22
+ var key_h := minf(48.0,s.y*0.07)
+ for i in range(keys.size()):
+  var col := i%3
+  var row := int(i/3)
+  var r := Rect2(s.x*(0.5+(col-1)*0.25)-key_w*0.5,s.y*0.41+row*(key_h+7),key_w,key_h)
+  if r.has_point(p):
+   return keys[i]
+ return ""
+
+func _animation_multiplier()->float:
+ return [0.65,1.0,1.4][clampi(int(settings.get("animation_speed",1)),0,2)]
+
+func _animation_label()->String:
+ return ["آرام","معمولی","سریع"][clampi(int(settings.get("animation_speed",1)),0,2)]
+
+func _difficulty_label()->String:
+ return ["آسان","معمولی","سخت"][clampi(int(settings.get("difficulty",1)),0,2)]
+
+func _theme_label()->String:
+ return ["تیره","شب آبی","سبز","بنفش"][posmod(int(settings.get("theme",0)),4)]
+
+func _background_color()->Color:
+ match posmod(int(settings.get("theme",0)),4):
+  1: return Color("#101c2c")
+  2: return Color("#12251f")
+  3: return Color("#20172b")
+  _: return C.bg
+
+func _apply_audio_settings()->void:
+ var master := AudioServer.get_bus_index("Master")
+ if master >= 0:
+  AudioServer.set_bus_mute(master,not bool(settings.get("music",true)) and not bool(settings.get("effects",true)))
+  AudioServer.set_bus_volume_db(master,linear_to_db(maxf(0.001,float(settings.get("volume",80))/100.0)))
 
 func _center(t:String,y:float,size:int,color:Color) -> void:
  var w:=get_viewport_rect().size.x
@@ -245,9 +321,67 @@ func _tap(p:Vector2,travel:float)->void:
     if not admin_unlocked: _notify("رمز نادرست است")
   else:
    if p.y<s.y*0.4: stage=posmod(stage+1,8)
-   elif p.y<s.y*0.51: admin_pin="1357"; _notify("رمز پنل تغییر کرد")
-   elif p.y<s.y*0.61: _notify("برای انتخاب ویدیو از فایل‌گزین اندروید استفاده می‌شود")
-  _save()
+   else:
+   var key := _admin_key_at(p,s)
+   if key == "پاک":
+    admin_text = admin_text.left(maxi(0,admin_text.length()-1))
+   elif key == "تأیید":
+    if admin_text.length() != 6:
+     _notify("رمز باید ۶ رقم باشد")
+    elif admin_pin == "" or admin_changing_pin:
+     admin_pin = admin_text
+     admin_text = ""
+     admin_changing_pin = false
+     admin_unlocked = true
+     _notify("رمز جدید ثبت شد")
+     _save(true)
+    elif admin_text == admin_pin:
+     admin_text = ""
+     admin_unlocked = true
+     _notify("ورود موفق")
+    else:
+     admin_text = ""
+     _notify("رمز نادرست است")
+   elif key.is_valid_int() and admin_text.length() < 6:
+    admin_text += key
+  else:
+   var row_h := minf(48.0,s.y*0.068)
+   var step := minf(60.0,s.y*0.085)
+   var y0 := s.y*0.21
+   var row := int(floor((p.y-y0)/step))
+   var col := 0 if p.x < s.x*0.5 else 1
+   var control := row*2+col
+   if row >= 0 and row < 6 and p.y <= y0+row*step+row_h:
+    match control:
+     0: settings["music"] = not bool(settings["music"])
+     1: settings["effects"] = not bool(settings["effects"])
+     2: settings["volume"] = posmod(int(settings["volume"])-1+20,100)+1
+     3: settings["animation_speed"] = posmod(int(settings["animation_speed"])+1,3)
+     4: settings["difficulty"] = posmod(int(settings["difficulty"])+1,3)
+     5: settings["visual_effects"] = not bool(settings["visual_effects"])
+     6: settings["theme"] = posmod(int(settings["theme"])+1,4)
+     7: settings["auto_save"] = not bool(settings["auto_save"])
+     8:
+      admin_changing_pin = true
+      admin_unlocked = false
+      admin_text = ""
+     9:
+      stage = 0
+      active_game = -1
+      progress = 0
+      target = 200
+      round_no = 1
+      task_index = 0
+      total_actions = 0
+      screen = "home"
+      _notify("بازی از ابتدا آغاز شد")
+     10:
+      _save(true)
+      _notify("ذخیره شد")
+     11:
+      _notify("جای ویدیوی پایانی فعلاً خالی است")
+   _apply_audio_settings()
+   _save(true)
  elif screen=="ending":
   screen="home"; stage=0
 
@@ -269,13 +403,15 @@ func _advance_game()->void:
   _notify(["خوب پیش می‌روی","یک قطعه دیگر پیدا شد","درخواست تازه رسید","مرحله بررسی تمدید شد"][rng.randi_range(0,3)])
 
 func _fmt(n:int)->String:
- return str(n).reverse().insert(0,"").reverse() if n<1000 else str(n)
+ return str(n)
 
 func _notify(t:String)->void:
  toast=t
  toast_timer=2.2
 
-func _save()->void:
+func _save(force:bool=false)->void:
+ if not force and not bool(settings.get("auto_save",true)):
+  return
  config.set_value("progress","stage",stage)
  config.set_value("progress","screen",screen)
  config.set_value("progress","active_game",active_game)
@@ -286,10 +422,12 @@ func _save()->void:
  config.set_value("progress","task_index",task_index)
  config.set_value("admin","pin",admin_pin)
  config.set_value("admin","ending_video",ending_video)
+ config.set_value("settings","all",settings)
  config.save(SAVE_PATH)
 
 func _load_save()->void:
- if config.load(SAVE_PATH)!=OK: return
+ if config.load(SAVE_PATH)!=OK:
+  return
  stage=clampi(int(config.get_value("progress","stage",0)),0,7)
  active_game=int(config.get_value("progress","active_game",-1))
  progress=int(config.get_value("progress","progress",0))
@@ -297,5 +435,14 @@ func _load_save()->void:
  total_actions=int(config.get_value("progress","total_actions",0))
  round_no=maxi(1,int(config.get_value("progress","round_no",1)))
  task_index=int(config.get_value("progress","task_index",0))
- admin_pin=str(config.get_value("admin","pin","2468"))
+ admin_pin=str(config.get_value("admin","pin",""))
+ if admin_pin == "2468" or admin_pin == "1357":
+  admin_pin = ""
  ending_video=str(config.get_value("admin","ending_video",""))
+ var saved:Variant=config.get_value("settings","all",{})
+ if saved is Dictionary:
+  for key in settings.keys():
+   if saved.has(key):
+    settings[key]=saved[key]
+ admin_unlocked=false
+ _apply_audio_settings()
