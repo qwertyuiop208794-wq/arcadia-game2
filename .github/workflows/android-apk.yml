@@ -144,6 +144,18 @@ jobs:
           ls -lh "$GITHUB_WORKSPACE/Arcadia-debug.apk"
           file "$GITHUB_WORKSPACE/Arcadia-debug.apk" || true
 
+      - name: Package project source for review
+        run: |
+          cd "$PROJECT_DIR"
+          zip -qr "$GITHUB_WORKSPACE/Iran-Project-Source.zip" . -x ".godot/*" -x "android/build/*"
+
+      - name: Upload project source
+        uses: actions/upload-artifact@v4
+        with:
+          name: Iran-Android-Source
+          path: Iran-Project-Source.zip
+          if-no-files-found: error
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
