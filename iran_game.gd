@@ -284,96 +284,106 @@ func _input(event:InputEvent)->void:
 
 func _tap(p:Vector2,travel:float)->void:
  var s:=get_viewport_rect().size
- if screen=="splash": screen="home"; return
- if screen=="home":
-  if p.y>s.y*0.5 and p.y<s.y*0.75: screen="stages"
-  elif p.x>s.x-100: screen="admin"
+ if screen=="splash":
+  screen="home"
+ elif screen=="home":
+  if p.x>s.x-100 and p.y<120:
+   screen="admin"
+  elif p.y>s.y*0.5 and p.y<s.y*0.75:
+   screen="stages"
  elif screen=="stages":
-  if p.y>s.y-100: screen="home"; return
-  var opts:Array=STAGES[stage]["opts"]
-  var h:=minf(66.0,(s.y*0.56)/opts.size())
-  var idx:=int(floor((p.y-s.y*0.29)/(h+8)))
-  if idx>=0 and idx<opts.size():
-   if idx==int(STAGES[stage]["pass"]):
-    stage+=1
-    if stage>=STAGES.size(): screen="ending"; stage=7
-    _save()
-   else:
-    active_option=idx
-    active_game=int(STAGES[stage]["games"][idx])
-    screen="game"
-    _save()
-  elif p.x>s.x-100: screen="admin"
+  if p.y>s.y-100:
+   screen="home"
+  elif p.x>s.x-100 and p.y<120:
+   screen="admin"
+  else:
+   var opts:Array=STAGES[stage]["opts"]
+   var h:=minf(66.0,(s.y*0.56)/opts.size())
+   var idx:=int(floor((p.y-s.y*0.29)/(h+8)))
+   if idx>=0 and idx<opts.size():
+    if idx==int(STAGES[stage]["pass"]):
+     stage+=1
+     if stage>=STAGES.size():
+      screen="ending"
+      stage=7
+     else:
+      screen="stages"
+     _save()
+    else:
+     active_option=idx
+     active_game=int(STAGES[stage]["games"][idx])
+     screen="game"
+     _save()
  elif screen=="game":
-  if p.y>s.y-105 and p.x<190: screen="stages"; _save(); return
-  if p.y>s.y*0.69 and p.y<s.y*0.84: _advance_game()
+  if p.y>s.y-105 and p.x<190:
+   screen="stages"
+   _save()
+   return
+  if p.y>s.y*0.69 and p.y<s.y*0.84:
+   _advance_game()
   elif p.y>s.y*0.38 and p.y<s.y*0.69:
    puzzle_rotation=(puzzle_rotation+1)%5
    _advance_game()
   _save()
  elif screen=="admin":
-  if p.y>s.y-100: screen="home"; return
+  if p.y>s.y-100 and p.x<170:
+   screen="home"
+   return
   if not admin_unlocked:
-   admin_text+="2468"[posmod(admin_text.length(),4)]
-   if admin_text.length()>=4:
-    admin_unlocked=admin_text.ends_with(admin_pin)
-    admin_text=""
-    if not admin_unlocked: _notify("رمز نادرست است")
-  else:
-   if p.y<s.y*0.4: stage=posmod(stage+1,8)
-   else:
-   var key := _admin_key_at(p,s)
-   if key == "پاک":
-    admin_text = admin_text.left(maxi(0,admin_text.length()-1))
-   elif key == "تأیید":
-    if admin_text.length() != 6:
+   var key:=_admin_key_at(p,s)
+   if key=="پاک":
+    admin_text=admin_text.left(maxi(0,admin_text.length()-1))
+   elif key=="تأیید":
+    if admin_text.length()!=6:
      _notify("رمز باید ۶ رقم باشد")
-    elif admin_pin == "" or admin_changing_pin:
-     admin_pin = admin_text
-     admin_text = ""
-     admin_changing_pin = false
-     admin_unlocked = true
+    elif admin_pin=="" or admin_changing_pin:
+     admin_pin=admin_text
+     admin_text=""
+     admin_changing_pin=false
+     admin_unlocked=true
      _notify("رمز جدید ثبت شد")
      _save(true)
-    elif admin_text == admin_pin:
-     admin_text = ""
-     admin_unlocked = true
+    elif admin_text==admin_pin:
+     admin_text=""
+     admin_unlocked=true
      _notify("ورود موفق")
     else:
-     admin_text = ""
+     admin_text=""
      _notify("رمز نادرست است")
-   elif key.is_valid_int() and admin_text.length() < 6:
-    admin_text += key
+   elif key.is_valid_int() and admin_text.length()<6:
+    admin_text+=key
   else:
-   var row_h := minf(48.0,s.y*0.068)
-   var step := minf(60.0,s.y*0.085)
-   var y0 := s.y*0.21
-   var row := int(floor((p.y-y0)/step))
-   var col := 0 if p.x < s.x*0.5 else 1
-   var control := row*2+col
-   if row >= 0 and row < 6 and p.y <= y0+row*step+row_h:
+   var row_h:=minf(48.0,s.y*0.068)
+   var step:=minf(60.0,s.y*0.085)
+   var y0:=s.y*0.21
+   var row:=int(floor((p.y-y0)/step))
+   var col:=0 if p.x<s.x*0.5 else 1
+   var control:=row*2+col
+   if row>=0 and row<6 and p.y<=y0+row*step+row_h:
     match control:
-     0: settings["music"] = not bool(settings["music"])
-     1: settings["effects"] = not bool(settings["effects"])
-     2: settings["volume"] = posmod(int(settings["volume"])-1+20,100)+1
-     3: settings["animation_speed"] = posmod(int(settings["animation_speed"])+1,3)
-     4: settings["difficulty"] = posmod(int(settings["difficulty"])+1,3)
-     5: settings["visual_effects"] = not bool(settings["visual_effects"])
-     6: settings["theme"] = posmod(int(settings["theme"])+1,4)
-     7: settings["auto_save"] = not bool(settings["auto_save"])
+     0: settings["music"]=not bool(settings["music"])
+     1: settings["effects"]=not bool(settings["effects"])
+     2: settings["volume"]=posmod(int(settings["volume"])-1+20,100)+1
+     3: settings["animation_speed"]=posmod(int(settings["animation_speed"])+1,3)
+     4: settings["difficulty"]=posmod(int(settings["difficulty"])+1,3)
+     5: settings["visual_effects"]=not bool(settings["visual_effects"])
+     6: settings["theme"]=posmod(int(settings["theme"])+1,4)
+     7: settings["auto_save"]=not bool(settings["auto_save"])
      8:
-      admin_changing_pin = true
-      admin_unlocked = false
-      admin_text = ""
+      admin_changing_pin=true
+      admin_unlocked=false
+      admin_text=""
      9:
-      stage = 0
-      active_game = -1
-      progress = 0
-      target = 200
-      round_no = 1
-      task_index = 0
-      total_actions = 0
-      screen = "home"
+      stage=0
+      active_game=-1
+      active_option=-1
+      progress=0
+      target=200
+      round_no=1
+      task_index=0
+      total_actions=0
+      completed_choices.clear()
+      screen="home"
       _notify("بازی از ابتدا آغاز شد")
      10:
       _save(true)
@@ -383,7 +393,9 @@ func _tap(p:Vector2,travel:float)->void:
    _apply_audio_settings()
    _save(true)
  elif screen=="ending":
-  screen="home"; stage=0
+  screen="home"
+  stage=0
+ queue_redraw()
 
 func _advance_game()->void:
  total_actions+=1
