@@ -26,6 +26,129 @@ jobs:
           test -n "$PROJECT_FILE"
           PROJECT_DIR="$(dirname "$PROJECT_FILE")"
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          echo "=== Enable Android ETC2/ASTC texture import ==="
+          if grep -q '^textures/vram_compression/import_etc2_astc=' "$PROJECT_DIR/project.godot"; then
+            sed -i 's@^textures/vram_compression/import_etc2_astc=.*@textures/vram_compression/import_etc2_astc=true@' "$PROJECT_DIR/project.godot"
+          elif grep -q '^\\[rendering\\]          grep -R -n '\.join(' "$PROJECT_DIR/scripts" || true
+          sed -i '682s@.*@	return "  •  ".join(PackedStringArray(parts))@' "$PROJECT_DIR/scripts/game.gd"
+          echo "=== Corrected line ==="
+          sed -n '680,684p' "$PROJECT_DIR/scripts/game.gd"
+          echo "=== Export preset ==="
+          test -f "$PROJECT_DIR/export_presets.cfg"
+          grep -nE '^\[preset|^name=|^platform=|target_sdk|version/code' "$PROJECT_DIR/export_presets.cfg" || true
+          echo "=== Godot version ==="
+          godot --version
+
+      - name: Install Java and Android export prerequisites
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends openjdk-17-jdk-headless unzip python3
+          export JAVA_HOME="$(dirname "$(dirname "$(readlink -f "$(command -v javac)")")")"
+          export ANDROID_HOME=/usr/lib/android-sdk
+          export ANDROID_SDK_ROOT="$ANDROID_HOME"
+          export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/23.2.8568313"
+          export ANDROID_NDK_ROOT="$ANDROID_NDK_HOME"
+          export PATH="$JAVA_HOME/bin:$ANDROID_HOME/cmdline-tools/cmdline-tools/bin:$ANDROID_HOME/platform-tools:$PATH"
+          SDKMANAGER="$(command -v sdkmanager || find "$ANDROID_HOME" -name sdkmanager -type f -print -quit)"
+          test -n "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-33" "platforms;android-35" "build-tools;33.0.2" "build-tools;34.0.0" "build-tools;35.0.0" "build-tools;35.0.1" "ndk;23.2.8568313" "ndk;28.1.13356709"
+          mkdir -p "$HOME/.android"
+          keytool -genkeypair -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -dname "CN=Android Debug,O=Android,C=US" -validity 10000 -keyalg RSA -keysize 2048 -noprompt
+          mkdir -p "$HOME/.config/godot"
+          cat > "$HOME/.config/godot/editor_settings-4.4.tres" <<EOF
+          [gd_resource type="EditorSettings" format=3]
+          [resource]
+          export/android/java_sdk_path = "$JAVA_HOME"
+          export/android/android_sdk_path = "$ANDROID_HOME"
+          export/android/debug_keystore = "$HOME/.android/debug.keystore"
+          export/android/debug_keystore_user = "androiddebugkey"
+          export/android/debug_keystore_pass = "android"
+          EOF
+          echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/23.2.8568313" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/23.2.8568313" >> "$GITHUB_ENV"
+          echo "PATH=$JAVA_HOME/bin:$ANDROID_HOME/cmdline-tools/cmdline-tools/bin:$ANDROID_HOME/platform-tools:$PATH" >> "$GITHUB_ENV"
+          java -version
+          "$SDKMANAGER" --list_installed | head -40
+
+      - name: Install Godot 4.4.1 export templates
+        run: |
+          python3 - <<'PY'
+          import urllib.request
+          url = "https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_export_templates.tpz"
+          urllib.request.urlretrieve(url, "/tmp/godot-templates.tpz")
+          PY
+          TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/4.4.1.stable"
+          mkdir -p "$TEMPLATE_DIR"
+          unzip -q -o /tmp/godot-templates.tpz -d "$TEMPLATE_DIR"
+          if [ -d "$TEMPLATE_DIR/templates" ]; then
+            cp -a "$TEMPLATE_DIR/templates/." "$TEMPLATE_DIR/"
+            rm -rf "$TEMPLATE_DIR/templates"
+          fi
+          test -s "$TEMPLATE_DIR/android_debug.apk"
+          test -s "$TEMPLATE_DIR/android_release.apk"
+          ls -lh "$TEMPLATE_DIR/android_debug.apk" "$TEMPLATE_DIR/android_release.apk"
+          echo "=== Android build-template files ==="
+          ls -lh "$TEMPLATE_DIR" | grep -E 'android|source' || true
+          if grep -q 'gradle_build/use_gradle_build=true' "$PROJECT_DIR/export_presets.cfg"; then
+            test -s "$TEMPLATE_DIR/android_source.zip"
+            mkdir -p "$PROJECT_DIR/android/build"
+            unzip -q -o "$TEMPLATE_DIR/android_source.zip" -d "$PROJECT_DIR/android/build"
+          fi
+          echo "=== Android export preset (sensitive values removed) ==="
+          grep -v -Ei 'password|keystore.*user|keystore.*pass' "$PROJECT_DIR/export_presets.cfg"
+          echo "=== SDK build-tools and platform folders ==="
+          ls -1 "$ANDROID_HOME/build-tools" || true
+          ls -1 "$ANDROID_HOME/platforms" || true
+          echo "=== Installed NDK versions ==="
+          ls -1 "$ANDROID_HOME/ndk" || true
+          echo "=== Android toolchain binaries ==="
+          for f in "$ANDROID_HOME/platform-tools/adb" "$ANDROID_HOME/build-tools/33.0.2/aapt" "$ANDROID_HOME/build-tools/35.0.0/zipalign" "$ANDROID_HOME/build-tools/35.0.0/apksigner" "$ANDROID_HOME/ndk/23.2.8568313/ndk-build" "$ANDROID_HOME/ndk/28.1.13356709/ndk-build"; do test -x "$f" && echo "OK: $f" || echo "MISSING: $f"; done
+          echo "=== Android export settings loaded from Godot config ==="
+          cat "$HOME/.config/godot/editor_settings-4.4.tres"
+          echo "=== Editor Android settings ==="
+          grep -n 'export/android/' "$HOME/.config/godot/editor_settings-4.4.tres" || true
+          test -x "$JAVA_HOME/bin/java"
+          test -d "$ANDROID_HOME/platforms/android-35"
+          test -d "$ANDROID_HOME/ndk/23.2.8568313"
+          test -s "$HOME/.android/debug.keystore"
+
+      - name: Import project and build APK
+        run: |
+          sed -i 's/^package\/signed=true$/package\/signed=false/' "$PROJECT_DIR/export_presets.cfg"
+          sed -i "s|^custom_template/debug=.*|custom_template/debug=\"$HOME/.local/share/godot/export_templates/4.4.1.stable/android_debug.apk\"|" "$PROJECT_DIR/export_presets.cfg"
+          sed -i "s|^custom_template/release=.*|custom_template/release=\"$HOME/.local/share/godot/export_templates/4.4.1.stable/android_release.apk\"|" "$PROJECT_DIR/export_presets.cfg"
+          grep -nE '^package/signed=|^custom_template/' "$PROJECT_DIR/export_presets.cfg" || true
+          godot --headless --editor --path "$PROJECT_DIR" --import
+          godot --headless --verbose --path "$PROJECT_DIR" --export-debug "Android" "$GITHUB_WORKSPACE/Arcadia-unsigned.apk"
+          test -s "$GITHUB_WORKSPACE/Arcadia-unsigned.apk"
+          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -f -p 4 "$GITHUB_WORKSPACE/Arcadia-unsigned.apk" "$GITHUB_WORKSPACE/Arcadia-aligned.apk"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign --ks "$HOME/.android/debug.keystore" --ks-key-alias androiddebugkey --ks-pass pass:android --key-pass pass:android --out "$GITHUB_WORKSPACE/Arcadia-debug.apk" "$GITHUB_WORKSPACE/Arcadia-aligned.apk"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$GITHUB_WORKSPACE/Arcadia-debug.apk"
+          test -s "$GITHUB_WORKSPACE/Arcadia-debug.apk"
+          ls -lh "$GITHUB_WORKSPACE/Arcadia-debug.apk"
+          file "$GITHUB_WORKSPACE/Arcadia-debug.apk" || true
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Arcadia-Android-APK
+          path: Arcadia-debug.apk
+          if-no-files-found: error
+ "$PROJECT_DIR/project.godot"; then
+            awk '
+              /^\\[rendering\\]$/ && !done { print; print "textures/vram_compression/import_etc2_astc=true"; done=1; next }
+              { print }
+              END { if (!done) { print ""; print "[rendering]"; print "textures/vram_compression/import_etc2_astc=true" } }
+            ' "$PROJECT_DIR/project.godot" > "$PROJECT_DIR/project.godot.tmp"
+            mv "$PROJECT_DIR/project.godot.tmp" "$PROJECT_DIR/project.godot"
+          else
+            printf '\\n[rendering]\\ntextures/vram_compression/import_etc2_astc=true\\n' >> "$PROJECT_DIR/project.godot"
+          fi
+          grep -n 'import_etc2_astc' "$PROJECT_DIR/project.godot"
           echo "=== GDScript join calls before repair ==="
           grep -R -n '\.join(' "$PROJECT_DIR/scripts" || true
           sed -i '682s@.*@	return "  •  ".join(PackedStringArray(parts))@' "$PROJECT_DIR/scripts/game.gd"
