@@ -44,11 +44,13 @@ jobs:
           export JAVA_HOME="$(dirname "$(dirname "$(readlink -f "$(command -v javac)")")")"
           export ANDROID_HOME=/usr/lib/android-sdk
           export ANDROID_SDK_ROOT="$ANDROID_HOME"
+          export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/23.2.8568313"
+          export ANDROID_NDK_ROOT="$ANDROID_NDK_HOME"
           export PATH="$JAVA_HOME/bin:$ANDROID_HOME/cmdline-tools/cmdline-tools/bin:$ANDROID_HOME/platform-tools:$PATH"
           SDKMANAGER="$(command -v sdkmanager || find "$ANDROID_HOME" -name sdkmanager -type f -print -quit)"
           test -n "$SDKMANAGER"
           yes | "$SDKMANAGER" --licenses || true
-          "$SDKMANAGER" "platform-tools" "platforms;android-33" "platforms;android-35" "build-tools;33.0.2" "build-tools;35.0.0"
+          "$SDKMANAGER" "platform-tools" "platforms;android-33" "platforms;android-35" "build-tools;33.0.2" "build-tools;34.0.0" "build-tools;35.0.0" "build-tools;35.0.1" "ndk;23.2.8568313" "ndk;28.1.13356709"
           mkdir -p "$HOME/.android"
           keytool -genkeypair -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -dname "CN=Android Debug,O=Android,C=US" -validity 10000 -keyalg RSA -keysize 2048 -noprompt
           mkdir -p "$HOME/.config/godot"
@@ -64,6 +66,8 @@ jobs:
           echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
           echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
           echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/23.2.8568313" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/23.2.8568313" >> "$GITHUB_ENV"
           echo "PATH=$JAVA_HOME/bin:$ANDROID_HOME/cmdline-tools/cmdline-tools/bin:$ANDROID_HOME/platform-tools:$PATH" >> "$GITHUB_ENV"
           java -version
           "$SDKMANAGER" --list_installed | head -40
@@ -97,12 +101,17 @@ jobs:
           echo "=== SDK build-tools and platform folders ==="
           ls -1 "$ANDROID_HOME/build-tools" || true
           ls -1 "$ANDROID_HOME/platforms" || true
+          echo "=== Installed NDK versions ==="
+          ls -1 "$ANDROID_HOME/ndk" || true
+          echo "=== Android toolchain binaries ==="
+          for f in "$ANDROID_HOME/platform-tools/adb" "$ANDROID_HOME/build-tools/33.0.2/aapt" "$ANDROID_HOME/build-tools/35.0.0/zipalign" "$ANDROID_HOME/build-tools/35.0.0/apksigner" "$ANDROID_HOME/ndk/23.2.8568313/ndk-build" "$ANDROID_HOME/ndk/28.1.13356709/ndk-build"; do test -x "$f" && echo "OK: $f" || echo "MISSING: $f"; done
           echo "=== Android export settings loaded from Godot config ==="
           cat "$HOME/.config/godot/editor_settings-4.4.tres"
           echo "=== Editor Android settings ==="
           grep -n 'export/android/' "$HOME/.config/godot/editor_settings-4.4.tres" || true
           test -x "$JAVA_HOME/bin/java"
           test -d "$ANDROID_HOME/platforms/android-35"
+          test -d "$ANDROID_HOME/ndk/23.2.8568313"
           test -s "$HOME/.android/debug.keystore"
 
       - name: Import project and build APK
