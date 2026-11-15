@@ -117,7 +117,9 @@ jobs:
       - name: Import project and build APK
         run: |
           sed -i 's/^package\/signed=true$/package\/signed=false/' "$PROJECT_DIR/export_presets.cfg"
-          grep -n '^package/signed=' "$PROJECT_DIR/export_presets.cfg" || true
+          sed -i "s|^custom_template/debug=.*|custom_template/debug=\"$HOME/.local/share/godot/export_templates/4.4.1.stable/android_debug.apk\"|" "$PROJECT_DIR/export_presets.cfg"
+          sed -i "s|^custom_template/release=.*|custom_template/release=\"$HOME/.local/share/godot/export_templates/4.4.1.stable/android_release.apk\"|" "$PROJECT_DIR/export_presets.cfg"
+          grep -nE '^package/signed=|^custom_template/' "$PROJECT_DIR/export_presets.cfg" || true
           godot --headless --editor --path "$PROJECT_DIR" --import
           godot --headless --verbose --path "$PROJECT_DIR" --export-debug "Android" "$GITHUB_WORKSPACE/Arcadia-unsigned.apk"
           test -s "$GITHUB_WORKSPACE/Arcadia-unsigned.apk"
