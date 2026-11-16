@@ -56,6 +56,7 @@ var sound_ready := false
 var mini_state: Dictionary = {}
 var tap_intervals: Array[float] = []
 var last_game_tap_msec := 0
+var ending_texture: Texture2D
 var event_kind := ""
 var event_code := 0
 var event_entry := ""
@@ -67,6 +68,8 @@ func _ready() -> void:
  DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(PROFILE_DIR))
  _load_profiles()
  _build_profile_input()
+ if ResourceLoader.exists("res://assets/ending_photo.jpg"):
+  ending_texture=load("res://assets/ending_photo.jpg")
  _load_save()
  _setup_audio()
  get_viewport().size_changed.connect(_on_viewport_resized)
@@ -691,18 +694,26 @@ func _setting_action(index:int)->void:
 
 func _draw_ending_art(s:Vector2)->void:
  var c:=Vector2(s.x*0.5,s.y*0.49)
+ if ending_texture!=null:
+  var area:=Rect2(s.x*0.13,s.y*0.30,s.x*0.74,s.y*0.39)
+  var tex_size:=Vector2(ending_texture.get_width(),ending_texture.get_height())
+  var scale_factor:=minf(area.size.x/tex_size.x,area.size.y/tex_size.y)
+  var draw_size:=tex_size*scale_factor
+  var dest:=Rect2(area.get_center()-draw_size*0.5,draw_size)
+  draw_rect(dest.grow(7),C.gold,true)
+  draw_texture_rect(ending_texture,dest,false)
+  return
  draw_circle(c,105,Color("#263844"))
  for i in range(3):
   var x:=c.x+(i-1)*86
-  var body:=Rect2(x-30,c.y-58,60,112)
-  draw_rect(body,Color("#f2c637"),true,27)
-  draw_circle(Vector2(x-9,c.y-16),11,C.white)
-  draw_circle(Vector2(x+9,c.y-16),11,C.white)
-  draw_circle(Vector2(x-9,c.y-16),4,C.bg)
-  draw_circle(Vector2(x+9,c.y-16),4,C.bg)
-  draw_rect(Rect2(x-26,c.y+20,52,34),Color("#3b74a3"),true,8)
-  draw_line(Vector2(x-27,c.y+28),Vector2(x-48,c.y+63),C.bg,5)
-  draw_line(Vector2(x+27,c.y+28),Vector2(x+48,c.y+63),C.bg,5)
+  draw_rect(Rect2(x-30,c.y-28,60,88),Color("#f2c637"),true)
+  draw_circle(Vector2(x,c.y-28),30,Color("#f2c637"))
+  draw_circle(Vector2(x,c.y+60),30,Color("#f2c637"))
+  draw_circle(Vector2(x,c.y-18),17,C.white)
+  draw_circle(Vector2(x,c.y-18),7,C.bg)
+  draw_rect(Rect2(x-25,c.y+32,50,24),Color("#3b74a3"),true)
+  draw_line(Vector2(x-27,c.y+44),Vector2(x-48,c.y+70),C.bg,5)
+  draw_line(Vector2(x+27,c.y+44),Vector2(x+48,c.y+70),C.bg,5)
  _center("مأموریت به پایان رسید!",c.y+135,16,C.gold)
 
 func _center(t:String,y:float,size:int,color:Color) -> void:
