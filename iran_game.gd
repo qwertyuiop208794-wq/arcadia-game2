@@ -146,10 +146,10 @@ func _draw() -> void:
   _draw_event(s)
  elif screen == "ending":
   _header("پایان مسیر","این مسیر را تو ساختی")
-  _center("تو با انتخاب‌های خودت، مسیرت در ایران را ساختی.",s.y*0.24,20,C.gold)
+  _center("موفق شدی با شرایطی که خودت انتخاب کردی، در ایران به دنیا بیایی!",s.y*0.24,19,C.gold)
   _draw_ending_art(s)
   _center("امیدوارم زندگی‌ات پر از شادی، آرامش و فرصت‌های خوب باشد.",s.y*0.72,14,C.white)
-  _center("و روزهای قشنگ زیادی پیش رویت قرار بگیرد.",s.y*0.755,13,C.muted)
+  _center("و همیشه دلیل‌های تازه‌ای برای لبخند زدن داشته باشی.",s.y*0.755,13,C.muted)
   _button(Rect2(s.x*0.12,s.y*0.81,s.x*0.76,54),"بازگشت به آغاز",C.gold)
  if toast_timer > 0.0:
   _button(Rect2(s.x*0.08,s.y-132,s.x*0.84,46),toast,C.panel2)
@@ -760,6 +760,7 @@ func _input(event:InputEvent)->void:
    queue_redraw()
 
 func _tap(p:Vector2,travel:float)->void:
+ _play_sfx("tap")
  var s:=get_viewport_rect().size
  if screen=="splash":
   screen="profile_select"
