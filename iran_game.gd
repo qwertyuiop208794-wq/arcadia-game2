@@ -2,7 +2,9 @@ extends Node2D
 
 const FONT_REGULAR: Font = preload("res://assets/fonts/ArabicUI-Regular.ttf")
 const FONT_BOLD: Font = preload("res://assets/fonts/ArabicUI-Bold.ttf")
-const SAVE_PATH := "user://iran_save.cfg"
+const PROFILE_DIR := "user://profiles"
+const PROFILE_INDEX_PATH := "user://profiles/index.cfg"
+const MAX_PROFILES := 5
 const C := {"bg":Color("#101820"),"panel":Color("#1b2933"),"panel2":Color("#263844"),"gold":Color("#e8bd70"),"white":Color("#f5f1e8"),"muted":Color("#a8b4bd"),"green":Color("#79a889"),"red":Color("#ce786f"),"blue":Color("#709db7")}
 const STAGES := [
  {"title":"شرایط تولد","opts":["👑 لاکچری و پولدار","💵 مرفه","🙂 معمولی","😐 سخت","🔥 خیلی سخت","☠️ دارک جهنمی"],"pass":5,"games":[0,1,2,3,4]},
@@ -32,25 +34,33 @@ var drag_start := Vector2.ZERO
 var dragging := false
 var toast := ""
 var toast_timer := 0.0
-var admin_open := false
-var admin_unlocked := false
-var admin_pin := ""
-var admin_text := ""
-var admin_changing_pin := false
-var ending_video := ""
+var current_profile := 0
+var profile_names: Array[String] = ["بازیکن ۱"]
+var profile_input: LineEdit
 var settings := {
  "music": true, "effects": true, "volume": 80,
+ "music_volume": 45, "effects_volume": 75,
  "animation_speed": 1, "difficulty": 1,
- "visual_effects": true, "theme": 0, "auto_save": true
+ "visual_effects": true, "theme": 0, "auto_save": true,
+ "screen_shake": true, "particles": true, "haptics": true
 }
 var completed_choices: Array = []
 var config := ConfigFile.new()
+var music_player: AudioStreamPlayer
+var sfx_player: AudioStreamPlayer
 var rng := RandomNumberGenerator.new()
+var audio_clock := 0.0
+var sound_ready := false
+var mini_state: Dictionary = {}
 
 func _ready() -> void:
  rng.randomize()
+ DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(PROFILE_DIR))
+ _load_profiles()
+ _build_profile_input()
  _load_save()
- get_viewport().size_changed.connect(queue_redraw)
+ _setup_audio()
+ get_viewport().size_changed.connect(_on_viewport_resized)
  screen = "splash"
  splash_time = 2.8
  _apply_audio_settings()
@@ -61,6 +71,14 @@ func _process(delta: float) -> void:
   splash_time -= delta * _animation_multiplier()
   if splash_time <= 0.0: screen = "home"
  if toast_timer > 0.0: toast_timer -= delta * _animation_multiplier()
+ if screen == "game" and active_game == 23:
+  audio_clock += delta
+  if audio_clock >= 1.0:
+   audio_clock = 0.0
+   mini_state["time_left"] = maxi(0,int(mini_state.get("time_left",30))-1)
+   if int(mini_state.get("time_left",0)) == 0:
+    mini_state["time_left"] = 30
+    _notify("زمان این نوبت تمام شد؛ سؤال تازه رسید")
  queue_redraw()
 
 func _draw() -> void:
@@ -81,6 +99,8 @@ func _draw() -> void:
   _center("۸ مرحله پیش روست",s.y*0.44,17,C.muted)
   _button(Rect2(s.x*0.12,s.y*0.55,s.x*0.76,64),"شروع بازی",C.gold)
   _button(Rect2(s.x-76,32,52,46),"⚙",C.panel2)
+  _button(Rect2(22,32,124,46),"پروفایل",C.panel2)
+  _center("بازیکن: "+_current_profile_name(),s.y*0.90,13,C.muted)
  elif screen == "stages":
   _header("مرحله‌ها","مرحله %d از ۸" % (stage+1))
   _center(STAGES[stage]["title"],s.y*0.23,30,C.gold)
@@ -92,13 +112,18 @@ func _draw() -> void:
   _button(Rect2(20,s.y-76,116,48),"بازگشت",C.panel)
  elif screen == "game":
   _draw_game(s)
- elif screen == "admin":
-  _draw_admin(s)
+ elif screen == "settings":
+  _draw_settings(s)
+ elif screen == "profile_select":
+  _draw_profile_select(s)
+ elif screen == "profile_create":
+  _draw_profile_create(s)
  elif screen == "ending":
   _header("پایان مسیر","سازنده را تماشا کن")
-  _center("به پایان ۸ مرحله رسیدی",s.y*0.36,25,C.gold)
-  _center("ویدیوی پایانی از پنل سازنده قابل انتخاب است",s.y*0.44,16,C.muted)
-  _button(Rect2(s.x*0.12,s.y*0.57,s.x*0.76,58),"بازگشت به آغاز",C.gold)
+  _center("به پایان ۸ مرحله رسیدی",s.y*0.24,25,C.gold)
+  _draw_ending_art(s)
+  _center("مسیرت به پایان رسید؛ اما ماجراها ادامه دارند",s.y*0.72,15,C.muted)
+  _button(Rect2(s.x*0.12,s.y*0.79,s.x*0.76,58),"بازگشت به آغاز",C.gold)
  if toast_timer > 0.0:
   _button(Rect2(s.x*0.08,s.y-132,s.x*0.84,46),toast,C.panel2)
 
