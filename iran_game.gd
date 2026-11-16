@@ -50,6 +50,8 @@ var music_player: AudioStreamPlayer
 var sfx_player: AudioStreamPlayer
 var rng := RandomNumberGenerator.new()
 var audio_clock := 0.0
+var shake_timer := 0.0
+var particle_clock := 0.0
 var sound_ready := false
 var mini_state: Dictionary = {}
 var event_kind := ""
@@ -76,6 +78,8 @@ func _process(delta: float) -> void:
   splash_time -= delta * _animation_multiplier()
   if splash_time <= 0.0: screen = "profile_select"
  if toast_timer > 0.0: toast_timer -= delta * _animation_multiplier()
+ if shake_timer>0.0: shake_timer=maxf(0.0,shake_timer-delta)
+ particle_clock+=delta
  if screen == "game" and active_game == 23:
   audio_clock += delta
   if audio_clock >= 1.0:
@@ -92,11 +96,21 @@ func _draw() -> void:
  if bool(settings.get("visual_effects",true)):
   draw_circle(Vector2(s.x*0.08,s.y*0.18),s.x*0.12,Color(0.91,0.74,0.44,0.035))
   draw_circle(Vector2(s.x*0.94,s.y*0.78),s.x*0.18,Color(0.44,0.66,0.78,0.035))
+ var shake:=Vector2.ZERO
+ if shake_timer>0.0 and bool(settings.get("screen_shake",true)):
+  shake=Vector2(rng.randf_range(-4.0,4.0),rng.randf_range(-3.0,3.0))
+ draw_set_transform(shake,0.0,Vector2.ONE)
+ if bool(settings.get("particles",true)):
+  for i in range(16):
+   var px:=fposmod(float(i*73)+particle_clock*19.0,s.x)
+   var py:=fposmod(float(i*117)+particle_clock*11.0,s.y)
+   draw_circle(Vector2(px,py),1.5+float(i%3),Color(0.91,0.74,0.44,0.12))
  if screen == "splash":
   _center("ایران",s.y*0.40,52,C.gold)
   _center("ساخته شده توسط",s.y*0.51,18,C.muted)
   _center("خلیل",s.y*0.56,28,C.white)
   _center("بازی آفلاین",s.y*0.82,14,C.muted)
+  draw_set_transform(Vector2.ZERO,0.0,Vector2.ONE)
   return
  if screen == "home":
   _header("ایران","یک انتخاب، یک ماجرای تازه")
@@ -133,6 +147,7 @@ func _draw() -> void:
   _button(Rect2(s.x*0.12,s.y*0.79,s.x*0.76,58),"بازگشت به آغاز",C.gold)
  if toast_timer > 0.0:
   _button(Rect2(s.x*0.08,s.y-132,s.x*0.84,46),toast,C.panel2)
+ draw_set_transform(Vector2.ZERO,0.0,Vector2.ONE)
 
 func _draw_game(s: Vector2) -> void:
  _header("بازی فرعی","مرحله %d  •  %s" % [stage+1,GAME_NAMES[active_game]])
@@ -144,7 +159,7 @@ func _draw_game(s: Vector2) -> void:
  draw_rect(Rect2(bar.position,Vector2(bar.size.x*ratio,bar.size.y)),C.green)
  _center("%s / %s" % [_fmt(progress),_fmt(target)],s.y*0.36,17,C.white)
  _draw_minigame_board(s)
- _button(Rect2(s.x*0.10,s.y*0.73,s.x*0.80,62),_action_label(),C.gold)
+ _center("برای حرکت صفحه را لمس یا بکش",s.y*0.77,13,C.muted)
  _button(Rect2(20,s.y-76,140,48),"بازگشت به انتخاب",C.panel)
  _center("بازیکن: "+_current_profile_name()+"  •  پیشرفت خودکار",s.y-18,12,C.muted)
  if active_game==23:
@@ -815,11 +830,19 @@ func _tap(p:Vector2,travel:float)->void:
    screen="stages"
    _save()
    return
-  if (p.y>s.y*0.69 and p.y<s.y*0.84) or (p.y>s.y*0.38 and p.y<s.y*0.69):
+  if p.x>s.x-100 and p.y<120:
+   screen="settings"
+  elif p.y>s.y*0.38 and p.y<s.y*0.69:
    _handle_minigame_action(p,travel,s)
   _save()
  elif screen=="ending":
   screen="home"
+  stage=0
+  active_game=-1
+  progress=0
+  target=200
+  round_no=1
+  task_index=0
   _play_sfx("success")
   _save(true)
  queue_redraw()
@@ -981,6 +1004,8 @@ func _game_success(message:String)->void:
 
 func _game_miss(message:String)->void:
  total_actions+=1
+ if bool(settings.get("screen_shake",true)):
+  shake_timer=0.18
  _notify(message)
  _play_sfx("error")
  if total_actions%25==0:
