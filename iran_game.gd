@@ -54,6 +54,8 @@ var shake_timer := 0.0
 var particle_clock := 0.0
 var sound_ready := false
 var mini_state: Dictionary = {}
+var tap_intervals: Array[float] = []
+var last_game_tap_msec := 0
 var event_kind := ""
 var event_code := 0
 var event_entry := ""
@@ -674,9 +676,9 @@ func _setting_action(index:int)->void:
    active_option=-1
    progress=0
    target=200
-   total_actions=0
    round_no=1
    task_index=0
+   mini_state.clear()
    completed_choices.clear()
    _save(true)
    _notify("پیشرفت این پروفایل از ابتدا آغاز شد")
@@ -857,6 +859,8 @@ func _tap(p:Vector2,travel:float)->void:
 
 func _start_minigame(game_id:int)->void:
  selected_items.clear()
+ tap_intervals.clear()
+ last_game_tap_msec=0
  puzzle_rotation=rng.randi_range(0,7)
  mini_state={
   "turn":0,"step":0,"score":0,"budget":120,"spent":0,
@@ -1024,6 +1028,27 @@ func _game_miss(message:String)->void:
  _save()
 
 func _handle_minigame_action(p:Vector2,travel:float,s:Vector2)->void:
+ var now:=Time.get_ticks_msec()
+ if last_game_tap_msec>0:
+  var interval:=float(now-last_game_tap_msec)
+  tap_intervals.append(interval)
+  if tap_intervals.size()>7:
+   tap_intervals.pop_front()
+  if tap_intervals.size()>=7:
+   var average:=0.0
+   for sample in tap_intervals:
+    average+=sample
+   average/=float(tap_intervals.size())
+   var spread:=0.0
+   for sample in tap_intervals:
+    spread=maxf(spread,absf(sample-average))
+   if average>=130.0 and average<=700.0 and spread<maxf(16.0,average*0.055):
+    tap_intervals.clear()
+    _begin_event()
+    event_kind="captcha"
+    _notify("برای ادامه، بررسی تصویری کوتاهی انجام بده")
+    return
+ last_game_tap_msec=now
  var center:=Vector2(s.x*0.5,s.y*0.53)
  var turn:=int(mini_state.get("turn",0))
  var step:=int(mini_state.get("step",0))
