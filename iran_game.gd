@@ -97,7 +97,7 @@ func _draw() -> void:
   _header("ایران","یک انتخاب، یک ماجرای تازه")
   _center("زندگی را از نو انتخاب کن",s.y*0.37,27,C.white)
   _center("۸ مرحله پیش روست",s.y*0.44,17,C.muted)
-  _button(Rect2(s.x*0.12,s.y*0.55,s.x*0.76,64),"شروع بازی",C.gold)
+  _button(Rect2(s.x*0.12,s.y*0.55,s.x*0.76,64),"ادامه مأموریت" if active_game>=0 else "شروع بازی",C.gold)
   _button(Rect2(s.x-76,32,52,46),"⚙",C.panel2)
   _button(Rect2(22,32,124,46),"پروفایل",C.panel2)
   _center("بازیکن: "+_current_profile_name(),s.y*0.90,13,C.muted)
@@ -259,10 +259,12 @@ func _draw_minigame_board(s: Vector2) -> void:
     draw_rect(Rect2(c.x-70,y,210*[0.65,0.85,0.48,0.95][i],18),C.green if i==puzzle_rotation%4 else C.blue)
   16:
    _center("برگه کسورات حقوق",c.y-95,15,C.muted)
-   draw_rect(Rect2(c.x-135,c.y-65,270,155),C.panel2)
-   _center("حقوق پایه + مزایا",c.y-25,14,C.white)
-   _center("مالیات − بیمه",c.y+12,14,C.muted)
-   _center("خالص پرداختی = ؟",c.y+58,18,C.gold)
+   draw_rect(Rect2(c.x-135,c.y-65,270,115),C.panel2)
+   _center("حقوق پایه + مزایا",c.y-38,14,C.white)
+   _center("مالیات − بیمه",c.y-8,14,C.muted)
+   _center("خالص پرداختی = ؟",c.y+18,17,C.gold)
+   for i in range(4):
+    _button(Rect2(c.x-155+i*80,c.y+65,70,42),str(700+i*100),C.panel2)
   17:
    _center("سبد خرید و بودجه",c.y-95,15,C.muted)
    for i in range(4):
@@ -306,7 +308,7 @@ func _draw_minigame_board(s: Vector2) -> void:
     var p:=Vector2(c.x-135+i*90,c.y+5)
     draw_circle(p,27,C.panel2)
     _center_at(["●","◆","▲","?"][i],p,22,C.gold)
-   _center("ترتیب را بررسی کن",c.y+65,13,C.muted)
+   _center("گزینهٔ بعدی را انتخاب کن",c.y+65,13,C.muted)
   23:
    _center("محاسبه زمان‌دار",c.y-95,15,C.muted)
    draw_rect(Rect2(c.x-115,c.y-60,230,50),C.panel2)
@@ -513,6 +515,7 @@ func _create_profile()->void:
 func _select_profile(index:int)->void:
  if index<0 or index>=profile_names.size():
   return
+ _save(true)
  current_profile=index
  _save_profiles()
  _load_save()
@@ -722,7 +725,10 @@ func _tap(p:Vector2,travel:float)->void:
   elif p.x>s.x-100 and p.y<120:
    screen="settings"
   elif p.y>s.y*0.5 and p.y<s.y*0.75:
-   screen="stages"
+   if active_game>=0:
+    screen="game"
+   else:
+    screen="stages"
  elif screen=="profile_select":
   if p.y>s.y-100:
    screen="home"
@@ -779,6 +785,13 @@ func _tap(p:Vector2,travel:float)->void:
       stage=7
      else:
       screen="stages"
+     active_game=-1
+     active_option=-1
+     progress=0
+     target=200
+     round_no=1
+     task_index=0
+     mini_state.clear()
      _play_sfx("success")
      _save()
     else:
@@ -978,7 +991,7 @@ func _handle_minigame_action(p:Vector2,travel:float,s:Vector2)->void:
    if travel<28.0:
     _game_miss("برای تنظیم زاویه، انگشت را بکش")
     return
-   var angle:=atan2(p.y-drag_start.y,p.x-drag_start.x)
+   var angle:=atan2(p.y-center.y,p.x-center.x)
    var expected_angle:=float(posmod(task_index+turn,8))*PI/4.0
    if absf(wrapf(angle-expected_angle,-PI,PI))<0.75: _game_success("قدرت سیگنال بهتر شد")
    else: _game_miss("زاویهٔ آنتن هنوز دقیق نیست")
@@ -1100,6 +1113,7 @@ func _save(force:bool=false)->void:
  config.set_value("progress","task_index",task_index)
  config.set_value("progress","puzzle_rotation",puzzle_rotation)
  config.set_value("progress","completed_choices",completed_choices)
+ config.set_value("progress","mini_state",mini_state)
  config.set_value("settings","all",settings)
  config.save(_profile_path(current_profile))
 
@@ -1138,6 +1152,9 @@ func _load_save()->void:
  var choices:Variant=config.get_value("progress","completed_choices",[])
  if choices is Array:
   completed_choices=choices
+ var saved_state:Variant=config.get_value("progress","mini_state",{})
+ if saved_state is Dictionary:
+  mini_state=saved_state
  var saved:Variant=config.get_value("settings","all",{})
  if saved is Dictionary:
   for key in settings.keys():
