@@ -135,6 +135,8 @@ jobs:
           sed -i "s|^custom_template/release=.*|custom_template/release=\"$HOME/.local/share/godot/export_templates/4.4.1.stable/android_release.apk\"|" "$PROJECT_DIR/export_presets.cfg"
           grep -nE '^package/signed=|^custom_template/' "$PROJECT_DIR/export_presets.cfg" || true
           godot --headless --editor --path "$PROJECT_DIR" --import
+          echo "=== Runtime startup smoke test ==="
+          godot --headless --path "$PROJECT_DIR" --quit-after 20
           godot --headless --verbose --path "$PROJECT_DIR" --export-debug "Android" "$GITHUB_WORKSPACE/Arcadia-unsigned.apk"
           test -s "$GITHUB_WORKSPACE/Arcadia-unsigned.apk"
           "$ANDROID_HOME/build-tools/35.0.0/zipalign" -f -p 4 "$GITHUB_WORKSPACE/Arcadia-unsigned.apk" "$GITHUB_WORKSPACE/Arcadia-aligned.apk"
