@@ -351,7 +351,7 @@ func _draw_minigame_board(s: Vector2) -> void:
    for i in range(6):
     var r:=Rect2(c.x-132+(i%3)*92,c.y-55+int(i/3)*75,78,62)
     draw_rect(r,C.green if i in shown_cards or i==int(mini_state.get("memory_first",-1)) else C.panel2)
-    var face:=memory_symbols[i] if i in shown_cards or i==int(mini_state.get("memory_first",-1)) else "؟"
+    var face:String=str(memory_symbols[i]) if i in shown_cards or i==int(mini_state.get("memory_first",-1)) else "؟"
     _center_at(face,r.get_center(),24,C.gold)
   25:
    _center("هزارتو؛ مسیر خروج را بکش",c.y-95,15,C.muted)
@@ -1252,7 +1252,7 @@ func _handle_minigame_action(p:Vector2,travel:float,s:Vector2)->void:
    if absf(movement.x)>absf(movement.y): direction=0 if movement.x>0 else 1
    else: direction=2 if movement.y>0 else 3
    var position:=int(mini_state.get("maze_pos",0))
-   var next_position:=position+[1,-1,5,-5][direction]
+   var next_position:int=position+int([1,-1,5,-5][direction])
    if next_position>=0 and next_position<20 and posmod(next_position+task_index,7)!=0:
     mini_state["maze_pos"]=next_position
     mini_state["maze_moves"]=int(mini_state.get("maze_moves",0))+1
