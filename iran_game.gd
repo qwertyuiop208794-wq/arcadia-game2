@@ -140,7 +140,7 @@ func _draw() -> void:
  elif screen == "event":
   _draw_event(s)
  elif screen == "ending":
-  _header("پایان مسیر","سازنده را تماشا کن")
+  _header("پایان مسیر","یادگاری تصویری")
   _center("به پایان ۸ مرحله رسیدی",s.y*0.24,25,C.gold)
   _draw_ending_art(s)
   _center("مسیرت به پایان رسید؛ اما ماجراها ادامه دارند",s.y*0.72,15,C.muted)
@@ -186,6 +186,7 @@ func _draw_minigame_board(s: Vector2) -> void:
    draw_line(Vector2(c.x,c.y-22),Vector2(c.x,c.y+48),C.gold,3)
    _center_at("درآمد",Vector2(c.x-78,c.y+12),16,C.white)
    _center_at("هزینه",Vector2(c.x+78,c.y+12),16,C.white)
+   _center("ماندهٔ موردنیاز: %d" % ((task_index+round_no)%3*25+25),c.y+48,12,C.gold)
    for i in range(3): _button(Rect2(c.x-145+i*100,c.y+72,88,50),str((i+1)*25+task_index),C.panel2)
   3:
    _center("اولویت منابع بحران",c.y-90,15,C.muted)
@@ -212,7 +213,7 @@ func _draw_minigame_board(s: Vector2) -> void:
      else: draw_line(p-Vector2(0,21),p+Vector2(0,21),C.blue,7)
      draw_circle(p,6,C.gold)
   6:
-   _center("پنل طبقات آسانسور",c.y-100,15,C.muted)
+   _center("مقصد مسافر: طبقهٔ %d" % (posmod(task_index+int(mini_state.get("turn",0))+2,6)+1),c.y-100,15,C.muted)
    for i in range(6): _button(Rect2(c.x-103+(i%2)*110,c.y-67+int(i/2)*55,90,46),"طبقه "+str(i+1),C.panel2)
    draw_rect(Rect2(c.x+125,c.y-45,35,105),C.panel)
    _center_at("↑",Vector2(c.x+142,c.y+7),24,C.gold)
@@ -220,7 +221,8 @@ func _draw_minigame_board(s: Vector2) -> void:
    _center("قطعه معیوب را پیدا کن",c.y-90,15,C.muted)
    for i in range(4):
     var p:=Vector2(c.x-150+i*100,c.y-2)
-    draw_circle(p,34,C.panel2)
+    var faulty:=i==posmod(task_index+round_no,4)
+    draw_circle(p,34,Color("#563b37") if faulty else C.panel2)
     _center_at(["⚙","🔧","🔌","🔩"][i],p,26,C.gold)
     _center_at(["لوله","کلید","سیم","شیر"][i],p+Vector2(0,55),12,C.white)
   8:
@@ -257,7 +259,7 @@ func _draw_minigame_board(s: Vector2) -> void:
    _center("خط کد دارای باگ را پیدا کن",c.y-95,15,C.muted)
    for i in range(4):
     var y:=c.y-60+i*40
-    draw_rect(Rect2(c.x-160,y,320,32),C.panel2 if i!=puzzle_rotation%4 else Color("#563b37"))
+    draw_rect(Rect2(c.x-160,y,320,32),Color("#563b37") if i==posmod(task_index+round_no,4) else C.panel2)
     _center_at("0"+str(i+1)+"  "+["if balance > 0:","amount = total / count","while stock > 0:","return result"][i],Vector2(c.x,y+1),12,C.white)
   13:
    _center("قفسه‌بندی فروشگاه",c.y-95,15,C.muted)
@@ -338,17 +340,23 @@ func _draw_minigame_board(s: Vector2) -> void:
    for i in range(4): _button(Rect2(c.x-150+i*100,c.y+12,88,52),str((i+1)*8+task_index),C.panel2)
   24:
    _center("کارت‌های حافظه",c.y-95,15,C.muted)
+   var memory_symbols:=["★","★","◆","◆","●","●"]
+   var shown_cards:Array=mini_state.get("memory_found",[])
    for i in range(6):
     var r:=Rect2(c.x-132+(i%3)*92,c.y-55+int(i/3)*75,78,62)
-    draw_rect(r,C.panel2)
-    _center_at("؟" if i!=puzzle_rotation%6 else ["★","◆","●","▲","✦","♥"][i],r.get_center(),24,C.gold)
+    draw_rect(r,C.green if i in shown_cards or i==int(mini_state.get("memory_first",-1)) else C.panel2)
+    var face:=memory_symbols[i] if i in shown_cards or i==int(mini_state.get("memory_first",-1)) else "؟"
+    _center_at(face,r.get_center(),24,C.gold)
   25:
    _center("هزارتو؛ مسیر خروج را بکش",c.y-95,15,C.muted)
    for row in range(4):
     for col in range(5):
      var x:=c.x-100+col*40
      var y:=c.y-55+row*40
+     var pos:=row*5+col
      draw_rect(Rect2(x,y,36,36),C.panel2 if posmod(row*2+col+puzzle_rotation,4)!=0 else C.bg)
+     if pos==int(mini_state.get("maze_pos",0)):
+      draw_circle(Vector2(x+18,y+18),11,C.gold)
    _center("ورود  →  خروج",c.y+120,13,C.gold)
   26:
    _center("مسابقه انتخاب استایل",c.y-95,15,C.muted)
@@ -873,7 +881,7 @@ func _cell_index(p:Vector2,area:Rect2,cols:int,rows:int)->int:
 func _begin_event()->void:
  var kinds:=["captcha","loading","update","bank","support","signature","queue","otp","invoice","form"]
  event_kind=kinds[posmod(int(total_actions/17)-1,kinds.size())]
- event_code=rng.randi_range(100,999)
+ event_code=rng.randi_range(1,9)*100+rng.randi_range(1,9)*10+rng.randi_range(1,9)
  event_entry=""
  event_step=0
  event_origin="game"
@@ -906,17 +914,19 @@ func _draw_event(s:Vector2)->void:
    _button(Rect2(s.x*0.5+(col-1)*(w+8)-w*0.5,s.y*0.45+row*(h+8),w,h),str(i+1),C.panel2)
   _button(Rect2(s.x*0.16,s.y*0.69,s.x*0.68,48),"تأیید کد",C.gold)
  elif event_kind=="bank":
-  _center("شماره حساب‌های آزمایشی را تطبیق بده",s.y*0.37,14,C.muted)
+  _center("کد تطبیق: کارت شمارهٔ %d" % (posmod(event_code,3)+1),s.y*0.37,14,C.muted)
   for i in range(3):
    _button(Rect2(s.x*0.12,s.y*0.43+i*58,s.x*0.76,48),"حساب آزمایشی ۰۰%d  •  کارت %d" % [i+1,i+5],C.panel2)
  elif event_kind=="queue":
-  _center("برای ادامه یک باجه انتخاب کن",s.y*0.37,14,C.muted)
+  _center("شماره نوبت نمایشی: باجهٔ %d" % (posmod(event_code,3)+1),s.y*0.37,14,C.muted)
   for i in range(3):
    _button(Rect2(s.x*0.12,s.y*0.43+i*58,s.x*0.76,48),"باجهٔ شمارهٔ "+str(i+1),C.panel2)
  elif event_kind=="invoice":
-  _center("مورد مشخص‌شده را از فاکتور انتخاب کن",s.y*0.37,14,C.muted)
+  var invoice_items:=["قطعهٔ یدکی","هزینهٔ حمل","مالیات نمایشی","جمع کل"]
+  var wanted:=posmod(event_code,4)
+  _center("ردیف موردنیاز: "+invoice_items[wanted],s.y*0.37,14,C.muted)
   for i in range(4):
-   _button(Rect2(s.x*0.12,s.y*0.40+i*55,s.x*0.76,46),["قطعهٔ یدکی","هزینهٔ حمل","مالیات نمایشی","جمع کل"][i],C.panel2)
+   _button(Rect2(s.x*0.12,s.y*0.40+i*55,s.x*0.76,46),invoice_items[i],C.panel2)
  elif event_kind=="signature":
   _center("برای ثبت امضای تمرینی، در کادر بکش",s.y*0.37,15,C.muted)
   draw_rect(Rect2(s.x*0.10,s.y*0.43,s.x*0.80,s.y*0.25),C.panel2,false,2)
@@ -1188,7 +1198,12 @@ func _handle_minigame_action(p:Vector2,travel:float,s:Vector2)->void:
    else:
     var first:=int(mini_state.get("memory_first",-1))
     mini_state["memory_first"]=-1
-    if first!=cell and int(first/2)==int(cell/2): _game_success("جفت کارت‌ها پیدا شد")
+    if first!=cell and int(first/2)==int(cell/2):
+     var found:Array=mini_state.get("memory_found",[])
+     found.append(first)
+     found.append(cell)
+     mini_state["memory_found"]=found
+     _game_success("جفت کارت‌ها پیدا شد")
     else: _game_miss("این دو کارت همسان نیستند")
   25:
    if travel<28.0:
