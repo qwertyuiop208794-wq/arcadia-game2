@@ -69,7 +69,7 @@ func _ready() -> void:
 func _process(delta: float) -> void:
  if screen == "splash":
   splash_time -= delta * _animation_multiplier()
-  if splash_time <= 0.0: screen = "home"
+  if splash_time <= 0.0: screen = "profile_select"
  if toast_timer > 0.0: toast_timer -= delta * _animation_multiplier()
  if screen == "game" and active_game == 23:
   audio_clock += delta
@@ -91,7 +91,7 @@ func _draw() -> void:
   _center("ایران",s.y*0.40,52,C.gold)
   _center("ساخته شده توسط",s.y*0.51,18,C.muted)
   _center("خلیل",s.y*0.56,28,C.white)
-  _center("برای ورود لمس کن",s.y*0.82,14,C.muted)
+  _center("بازی آفلاین",s.y*0.82,14,C.muted)
   return
  if screen == "home":
   _header("ایران","یک انتخاب، یک ماجرای تازه")
@@ -139,7 +139,9 @@ func _draw_game(s: Vector2) -> void:
  _draw_minigame_board(s)
  _button(Rect2(s.x*0.10,s.y*0.73,s.x*0.80,62),_action_label(),C.gold)
  _button(Rect2(20,s.y-76,140,48),"بازگشت به انتخاب",C.panel)
- _center("پیشرفت ذخیره می‌شود",s.y-18,12,C.muted)
+ _center("بازیکن: "+_current_profile_name()+"  •  پیشرفت خودکار",s.y-18,12,C.muted)
+ if active_game==23:
+  _center("زمان باقی‌مانده: %d ثانیه" % int(mini_state.get("time_left",30)),s.y*0.40,14,C.gold)
 
 func _draw_minigame_board(s: Vector2) -> void:
  var c:=Vector2(s.x*0.5,s.y*0.53)
@@ -799,6 +801,266 @@ func _tap(p:Vector2,travel:float)->void:
   _play_sfx("success")
   _save(true)
  queue_redraw()
+
+func _start_minigame(game_id:int)->void:
+ selected_items.clear()
+ puzzle_rotation=rng.randi_range(0,7)
+ mini_state={
+  "turn":0,"step":0,"score":0,"budget":120,"spent":0,
+  "safe_step":0,"network_node":0,"download_mask":0,
+  "maze_pos":0,"maze_moves":0,"time_left":30,
+  "memory_first":-1,"memory_found":[],"vehicle_x":0,
+  "vehicle_y":0,"light":1,"balance":0
+ }
+ if game_id==23:
+  mini_state["time_left"]=30
+ audio_clock=0.0
+
+func _cell_index(p:Vector2,area:Rect2,cols:int,rows:int)->int:
+ if not area.has_point(p):
+  return -1
+ var cell_w:=area.size.x/float(cols)
+ var cell_h:=area.size.y/float(rows)
+ var col:=clampi(int((p.x-area.position.x)/cell_w),0,cols-1)
+ var row:=clampi(int((p.y-area.position.y)/cell_h),0,rows-1)
+ return row*cols+col
+
+func _game_success(message:String)->void:
+ mini_state["step"]=int(mini_state.get("step",0))+1
+ mini_state["turn"]=int(mini_state.get("turn",0))+1
+ _advance_game()
+ _notify(message)
+ _play_sfx("success")
+
+func _game_miss(message:String)->void:
+ total_actions+=1
+ _notify(message)
+ _play_sfx("error")
+ if total_actions%25==0:
+  target+=maxi(10,int(target*0.08))
+  _notify("بررسی تازه‌ای به مأموریت اضافه شد")
+ _save()
+
+func _handle_minigame_action(p:Vector2,travel:float,s:Vector2)->void:
+ var center:=Vector2(s.x*0.5,s.y*0.53)
+ var turn:=int(mini_state.get("turn",0))
+ var step:=int(mini_state.get("step",0))
+ var cell:=-1
+ match active_game:
+  0:
+   var delta:=p-center
+   if delta.length()>118.0 or delta.length()<18.0:
+    _game_miss("برای چرخاندن، یکی از خانه‌های حلقه را لمس کن")
+    return
+   var sector:=posmod(int(round((atan2(delta.y,delta.x)+PI/2.0)/(TAU/6.0))),6)
+   var expected:=posmod(task_index+round_no+step*2,6)
+   if sector==expected: _game_success("یک دندانهٔ گاوصندوق تنظیم شد")
+   else:
+    mini_state["safe_step"]=0
+    _game_miss("ترتیب قفل درست نبود؛ دوباره امتحان کن")
+  1:
+   cell=_cell_index(p,Rect2(center.x-135,center.y-65,265,142),2,2)
+   if cell<0: _game_miss("یکی از دسته‌های هزینه را انتخاب کن")
+   else:
+    mini_state["spent"]=int(mini_state.get("spent",0))+[34,26,18,12][cell]
+    _game_success("هزینه در دستهٔ مربوط ثبت شد")
+  2:
+   cell=_cell_index(p,Rect2(center.x-150,center.y+60,300,68),3,1)
+   if cell<0: _game_miss("یکی از عددهای تراز را انتخاب کن")
+   else:
+    var expected:=posmod(task_index+round_no+turn,3)
+    if cell==expected: _game_success("یک بخش از تراز برابر شد")
+    else: _game_miss("این عدد با طرف دیگر تراز برابر نیست")
+  3:
+   cell=_cell_index(p,Rect2(center.x-135,center.y-55,270,135),3,1)
+   var expected:=posmod(task_index+turn,3)
+   if cell==expected: _game_success("منبع ضروری به‌درستی تخصیص یافت")
+   else: _game_miss("اولویت بحران را دوباره بررسی کن")
+  4:
+   cell=_cell_index(p,Rect2(center.x-155,center.y-62,310,135),4,1)
+   var expected:=posmod(task_index+turn,4)
+   if cell==expected: _game_success("مدرک پرونده تأیید شد")
+   else: _game_miss("این مدرک در این مرحله لازم نیست")
+  5:
+   cell=_cell_index(p,Rect2(center.x-125,center.y-115,250,220),3,3)
+   if cell>=0:
+    mini_state["tile_"+str(cell)]=posmod(int(mini_state.get("tile_"+str(cell),0))+1,4)
+    puzzle_rotation=posmod(puzzle_rotation+1,4)
+    _game_success("اتصال لوله تغییر کرد؛ مسیر را کامل کن")
+   else: _game_miss("یکی از قطعات شبکهٔ لوله را انتخاب کن")
+  6:
+   cell=_cell_index(p,Rect2(center.x-105,center.y-67,200,165),2,3)
+   var expected:=posmod(task_index+turn+2,6)
+   if cell==expected: _game_success("آسانسور به طبقهٔ درخواستی رسید")
+   else: _game_miss("مسافر مقصد دیگری دارد")
+  7:
+   cell=_cell_index(p,Rect2(center.x-165,center.y-42,330,110),4,1)
+   var expected:=posmod(task_index+round_no,4)
+   if cell==expected: _game_success("قطعهٔ معیوب با قطعهٔ سالم عوض شد")
+   else: _game_miss("این قطعه سالم است؛ مورد خراب را پیدا کن")
+  8:
+   cell=_cell_index(p,Rect2(center.x-150,center.y-52,300,115),3,1)
+   var expected:=posmod(task_index+turn,3)
+   if cell==expected: _game_success("سند با محموله تطبیق داشت")
+   else: _game_miss("شمارهٔ سند با محموله هم‌خوانی ندارد")
+  9:
+   if travel<28.0:
+    _game_miss("خودرو را با کشیدن انگشت هدایت کن")
+    return
+   var movement:=p-drag_start
+   var direction:=0
+   if absf(movement.x)>absf(movement.y): direction=0 if movement.x>0 else 1
+   else: direction=2 if movement.y>0 else 3
+   var expected:=posmod(task_index+turn,4)
+   if direction==expected:
+    mini_state["vehicle_x"]=int(mini_state.get("vehicle_x",0))+1
+    _game_success("خودرو از مانع بعدی عبور کرد")
+   else: _game_miss("مسیر اشتباه بود؛ فرمان را اصلاح کن")
+  10:
+   cell=_cell_index(p,Rect2(center.x-165,center.y-45,330,95),4,1)
+   var expected:=posmod(turn+task_index,4)
+   if cell==expected: _game_success("قطعه در ایستگاه بعدی نصب شد")
+   else: _game_miss("ترتیب مونتاژ را رعایت کن")
+  11:
+   cell=_cell_index(p,Rect2(center.x-150,center.y-72,300,150),2,2)
+   if cell>=0:
+    mini_state["score"]=int(mini_state.get("score",0))+[2,3,1,2][cell]
+    _game_success("رأی ثبت شد؛ دستور جلسه ادامه دارد")
+   else: _game_miss("یکی از پیشنهادهای جلسه را انتخاب کن")
+  12:
+   cell=_cell_index(p,Rect2(center.x-160,center.y-60,320,160),1,4)
+   var expected:=posmod(task_index+round_no,4)
+   if cell==expected: _game_success("باگ این بخش پیدا شد")
+   else: _game_miss("این خط ایرادی ندارد؛ دوباره بررسی کن")
+  13:
+   cell=_cell_index(p,Rect2(center.x-150,center.y-58,300,150),4,2)
+   if cell>=0:
+    var shelf:=posmod(cell,4)
+    if shelf==posmod(task_index+turn,4): _game_success("کالا در قفسهٔ درست قرار گرفت")
+    else: _game_miss("جای این کالا در قفسهٔ دیگری است")
+   else: _game_miss("یک کالا را برای قفسه‌بندی انتخاب کن")
+  14:
+   cell=_cell_index(p,Rect2(center.x-150,center.y-60,300,145),3,1)
+   var expected:=posmod(task_index+turn,3)
+   if cell==expected: _game_success("شیفت کاری ثبت شد")
+   else: _game_miss("این جایگاه با برنامهٔ شیفت سازگار نیست")
+  15:
+   cell=_cell_index(p,Rect2(center.x-150,center.y-68,300,145),1,4)
+   if cell>=0:
+    mini_state["balance"]=int(mini_state.get("balance",0))+[10,20,15,5][cell]
+    _game_success("سهم دارایی تنظیم شد")
+   else: _game_miss("یکی از سبدهای دارایی را انتخاب کن")
+  16:
+   cell=_cell_index(p,Rect2(center.x-150,center.y-20,300,150),4,1)
+   var expected:=posmod(int((1000+task_index*20)*0.8/100.0),4)
+   if cell==expected: _game_success("محاسبهٔ کسورات ثبت شد")
+   else: _game_miss("عدد خالص با محاسبهٔ کسورات برابر نیست")
+  17:
+   cell=_cell_index(p,Rect2(center.x-160,center.y-60,320,140),4,1)
+   var prices:=[15,25,35,45]
+   if cell>=0:
+    var spent:=int(mini_state.get("spent",0))
+    if spent+prices[cell]<=int(mini_state.get("budget",120)):
+     mini_state["spent"]=spent+prices[cell]
+     _game_success("کالا به سبد خرید اضافه شد")
+    else: _game_miss("بودجهٔ خرید برای این کالا کافی نیست")
+   else: _game_miss("یک کالا را انتخاب کن")
+  18:
+   var nodes:=[Vector2(-125,-10),Vector2(-42,-45),Vector2(48,-45),Vector2(126,0),Vector2(0,48)]
+   var node:=-1
+   for i in range(nodes.size()):
+    if p.distance_to(center+nodes[i])<32.0: node=i
+   if node==posmod(turn,5):
+    mini_state["network_node"]=node
+    _game_success("گره شبکه وصل شد؛ گره بعدی را پیدا کن")
+   else: _game_miss("ترتیب اتصال گره‌ها صحیح نیست")
+  19:
+   if travel<28.0:
+    _game_miss("برای تنظیم زاویه، انگشت را بکش")
+    return
+   var angle:=atan2(p.y-drag_start.y,p.x-drag_start.x)
+   var expected_angle:=float(posmod(task_index+turn,8))*PI/4.0
+   if absf(wrapf(angle-expected_angle,-PI,PI))<0.75: _game_success("قدرت سیگنال بهتر شد")
+   else: _game_miss("زاویهٔ آنتن هنوز دقیق نیست")
+  20:
+   cell=_cell_index(p,Rect2(center.x-155,center.y-62,310,140),3,1)
+   var expected:=posmod(task_index+turn+1,3)
+   if cell==expected: _game_success("بستهٔ مناسب فعال شد")
+   else: _game_miss("حجم بسته با مصرف موردنیاز تطبیق ندارد")
+  21:
+   cell=_cell_index(p,Rect2(center.x-165,center.y-45,330,115),5,1)
+   var expected:=posmod(turn,5)
+   if cell==expected:
+    mini_state["download_mask"]=int(mini_state.get("download_mask",0)) | (1<<cell)
+    _game_success("تکهٔ فایل بازیابی شد")
+   else: _game_miss("ترتیب تکه‌های فایل را رعایت کن")
+  22:
+   cell=_cell_index(p,Rect2(center.x-165,center.y-40,330,105),4,1)
+   var expected:=posmod(task_index+round_no,4)
+   if cell==expected: _game_success("الگوی منطقی تکمیل شد")
+   else: _game_miss("ادامهٔ الگو درست نیست")
+  23:
+   cell=_cell_index(p,Rect2(center.x-160,center.y+5,320,75),4,1)
+   var answer:=posmod((task_index+4+round_no+2)*2,4)
+   if cell==answer:
+    mini_state["time_left"]=30
+    _game_success("محاسبه درست بود؛ سؤال بعدی آماده شد")
+   else: _game_miss("پاسخ محاسبه اشتباه است")
+  24:
+   cell=_cell_index(p,Rect2(center.x-135,center.y-62,270,140),3,2)
+   if cell<0: _game_miss("یکی از کارت‌ها را لمس کن")
+   elif int(mini_state.get("memory_first",-1))<0:
+    mini_state["memory_first"]=cell
+    _notify("کارت اول ثبت شد؛ کارت همسان را پیدا کن")
+    _play_sfx("tap")
+   else:
+    var first:=int(mini_state.get("memory_first",-1))
+    mini_state["memory_first"]=-1
+    if first!=cell and int(first/2)==int(cell/2): _game_success("جفت کارت‌ها پیدا شد")
+    else: _game_miss("این دو کارت همسان نیستند")
+  25:
+   if travel<28.0:
+    _game_miss("در هزارتو با کشیدن انگشت حرکت کن")
+    return
+   var movement:=p-drag_start
+   var direction:=0
+   if absf(movement.x)>absf(movement.y): direction=0 if movement.x>0 else 1
+   else: direction=2 if movement.y>0 else 3
+   var position:=int(mini_state.get("maze_pos",0))
+   var next_position:=position+[1,-1,5,-5][direction]
+   if next_position>=0 and next_position<20 and posmod(next_position+task_index,7)!=0:
+    mini_state["maze_pos"]=next_position
+    mini_state["maze_moves"]=int(mini_state.get("maze_moves",0))+1
+    _game_success("یک خانه در هزارتو جلو رفتی")
+   else: _game_miss("این مسیر بسته است")
+  26:
+   cell=_cell_index(p,Rect2(center.x-155,center.y-62,310,150),3,1)
+   if cell>=0:
+    mini_state["score"]=int(mini_state.get("score",0))+[1,2,3][cell]
+    _game_success("استایل برای بخش بعد ثبت شد")
+   else: _game_miss("یکی از مدل‌ها را انتخاب کن")
+  27:
+   if travel<28.0:
+    _game_miss("برای تنظیم تقارن، انگشت را افقی بکش")
+    return
+   var expected_direction:=1 if posmod(task_index+turn,2)==0 else -1
+   if signf((p-drag_start).x)==float(expected_direction):
+    puzzle_rotation=posmod(puzzle_rotation+1,8)
+    _game_success("جزئیات چهره متقارن‌تر شد")
+   else: _game_miss("حرکت را در جهت درست انجام بده")
+  28:
+   var adjustment:=0
+   if p.x<center.x-45: adjustment=-1
+   elif p.x>center.x+45: adjustment=1
+   mini_state["light"]=clampi(int(mini_state.get("light",1))+adjustment,0,3)
+   _game_success("نور و کادر دوربین تنظیم شد")
+  29:
+   cell=_cell_index(p,Rect2(center.x-160,center.y-60,320,140),4,1)
+   var expected:=posmod(task_index+turn,4)
+   if cell==expected: _game_success("یک بخش از پوشش نهایی انتخاب شد")
+   else: _game_miss("این بخش با ترکیب درخواستی هماهنگ نیست")
+  _:
+   _game_miss("حرکت در مأموریت ثبت نشد")
 
 func _advance_game()->void:
  total_actions+=1
