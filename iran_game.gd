@@ -1226,6 +1226,8 @@ func _advance_game()->void:
   _notify("یک بخش تازه اضافه شد؛ ادامه بده")
  else:
   _notify(["خوب پیش می‌روی","یک قطعه دیگر پیدا شد","درخواست تازه رسید","مرحله بررسی تمدید شد"][rng.randi_range(0,3)])
+ if total_actions>0 and total_actions%17==0:
+  _begin_event()
 
 func _fmt(n:int)->String:
  return str(n)
