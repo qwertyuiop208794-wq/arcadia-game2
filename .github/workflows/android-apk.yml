@@ -138,10 +138,24 @@ jobs:
           sed -i "s|^custom_template/debug=.*|custom_template/debug=\"$HOME/.local/share/godot/export_templates/4.4.1.stable/android_debug.apk\"|" "$PROJECT_DIR/export_presets.cfg"
           sed -i "s|^custom_template/release=.*|custom_template/release=\"$HOME/.local/share/godot/export_templates/4.4.1.stable/android_release.apk\"|" "$PROJECT_DIR/export_presets.cfg"
           grep -nE '^package/signed=|^custom_template/' "$PROJECT_DIR/export_presets.cfg" || true
-          godot --headless --editor --path "$PROJECT_DIR" --import
+          echo "=== Import project and collect diagnostics ==="
+          godot --headless --editor --path "$PROJECT_DIR" --import 2>&1 | tee "$GITHUB_WORKSPACE/godot-import.log"
+          if grep -E "SCRIPT ERROR: Parse Error|ERROR: Failed to load script" "$GITHUB_WORKSPACE/godot-import.log"; then
+            echo "Godot import reported a script parse error."
+            exit 1
+          fi
           echo "=== Runtime startup smoke test ==="
-          godot --headless --path "$PROJECT_DIR" --quit-after 20
-          godot --headless --verbose --path "$PROJECT_DIR" --export-debug "Android" "$GITHUB_WORKSPACE/Iran-unsigned.apk"
+          godot --headless --path "$PROJECT_DIR" --quit-after 20 2>&1 | tee "$GITHUB_WORKSPACE/godot-runtime.log"
+          if grep -E "SCRIPT ERROR: Parse Error|ERROR: Failed to load script|Parse Error:" "$GITHUB_WORKSPACE/godot-runtime.log"; then
+            echo "Godot runtime reported a script parse error."
+            exit 1
+          fi
+          echo "=== Android export ==="
+          godot --headless --verbose --path "$PROJECT_DIR" --export-debug "Android" "$GITHUB_WORKSPACE/Iran-unsigned.apk" 2>&1 | tee "$GITHUB_WORKSPACE/godot-export.log"
+          if grep -E "SCRIPT ERROR: Parse Error|ERROR: Failed to load script|Parse Error:" "$GITHUB_WORKSPACE/godot-export.log"; then
+            echo "Godot export reported a script parse error."
+            exit 1
+          fi
           test -s "$GITHUB_WORKSPACE/Iran-unsigned.apk"
           "$ANDROID_HOME/build-tools/35.0.0/zipalign" -f -p 4 "$GITHUB_WORKSPACE/Iran-unsigned.apk" "$GITHUB_WORKSPACE/Iran-aligned.apk"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign --ks "$HOME/.android/debug.keystore" --ks-key-alias androiddebugkey --ks-pass pass:android --key-pass pass:android --out "$GITHUB_WORKSPACE/Iran.apk" "$GITHUB_WORKSPACE/Iran-aligned.apk"
