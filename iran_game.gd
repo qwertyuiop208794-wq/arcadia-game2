@@ -52,6 +52,11 @@ var rng := RandomNumberGenerator.new()
 var audio_clock := 0.0
 var sound_ready := false
 var mini_state: Dictionary = {}
+var event_kind := ""
+var event_code := 0
+var event_entry := ""
+var event_step := 0
+var event_origin := "game"
 
 func _ready() -> void:
  rng.randomize()
@@ -118,6 +123,8 @@ func _draw() -> void:
   _draw_profile_select(s)
  elif screen == "profile_create":
   _draw_profile_create(s)
+ elif screen == "event":
+  _draw_event(s)
  elif screen == "ending":
   _header("پایان مسیر","سازنده را تماشا کن")
   _center("به پایان ۸ مرحله رسیدی",s.y*0.24,25,C.gold)
@@ -750,6 +757,8 @@ func _tap(p:Vector2,travel:float)->void:
      profile_input.grab_focus()
     else:
      _notify("حداکثر ۵ پروفایل می‌توان ساخت")
+ elif screen=="event":
+  _handle_event_action(p,travel,s)
  elif screen=="profile_create":
   if p.y>s.y-100:
    screen="profile_select"
@@ -837,6 +846,131 @@ func _cell_index(p:Vector2,area:Rect2,cols:int,rows:int)->int:
  var col:=clampi(int((p.x-area.position.x)/cell_w),0,cols-1)
  var row:=clampi(int((p.y-area.position.y)/cell_h),0,rows-1)
  return row*cols+col
+
+func _begin_event()->void:
+ var kinds:=["captcha","loading","update","bank","support","signature","queue","otp","invoice","form"]
+ event_kind=kinds[posmod(int(total_actions/17)-1,kinds.size())]
+ event_code=rng.randi_range(100,999)
+ event_entry=""
+ event_step=0
+ event_origin="game"
+ screen="event"
+ _notify("یک بررسی جانبی جدید")
+
+func _draw_event(s:Vector2)->void:
+ _header("رویداد جانبی","کاملاً ساختگی و بدون اتصال به اینترنت")
+ var titles={
+  "captcha":"تأیید تصویری نمایشی",
+  "loading":"در حال پردازش درخواست",
+  "update":"به‌روزرسانی ساختگی بازی",
+  "bank":"تطبیق حساب آزمایشی",
+  "support":"تماس با پشتیبانی نمایشی",
+  "signature":"امضای دیجیتال تمرینی",
+  "queue":"سامانه نوبت‌دهی",
+  "otp":"کد یک‌بارمصرف آزمایشی",
+  "invoice":"بررسی فاکتور",
+  "form":"فرم چندمرحله‌ای"
+ }
+ _center(str(titles.get(event_kind,"بررسی جانبی")),s.y*0.25,21,C.gold)
+ if event_kind=="captcha" or event_kind=="otp":
+  _center("کد نمایشی: %03d" % event_code,s.y*0.34,25,C.white)
+  _center("ورودی: "+"●".repeat(event_entry.length()),s.y*0.40,18,C.gold)
+  var w:=s.x*0.22
+  var h:=minf(48.0,s.y*0.065)
+  for i in range(9):
+   var col:=i%3
+   var row:=int(i/3)
+   _button(Rect2(s.x*0.5+(col-1)*(w+8)-w*0.5,s.y*0.45+row*(h+8),w,h),str(i+1),C.panel2)
+  _button(Rect2(s.x*0.16,s.y*0.69,s.x*0.68,48),"تأیید کد",C.gold)
+ elif event_kind=="bank":
+  _center("شماره حساب‌های آزمایشی را تطبیق بده",s.y*0.37,14,C.muted)
+  for i in range(3):
+   _button(Rect2(s.x*0.12,s.y*0.43+i*58,s.x*0.76,48),"حساب آزمایشی ۰۰%d  •  کارت %d" % [i+1,i+5],C.panel2)
+ elif event_kind=="queue":
+  _center("برای ادامه یک باجه انتخاب کن",s.y*0.37,14,C.muted)
+  for i in range(3):
+   _button(Rect2(s.x*0.12,s.y*0.43+i*58,s.x*0.76,48),"باجهٔ شمارهٔ "+str(i+1),C.panel2)
+ elif event_kind=="invoice":
+  _center("مورد مشخص‌شده را از فاکتور انتخاب کن",s.y*0.37,14,C.muted)
+  for i in range(4):
+   _button(Rect2(s.x*0.12,s.y*0.40+i*55,s.x*0.76,46),["قطعهٔ یدکی","هزینهٔ حمل","مالیات نمایشی","جمع کل"][i],C.panel2)
+ elif event_kind=="signature":
+  _center("برای ثبت امضای تمرینی، در کادر بکش",s.y*0.37,15,C.muted)
+  draw_rect(Rect2(s.x*0.10,s.y*0.43,s.x*0.80,s.y*0.25),C.panel2,false,2)
+  _center("محل امضا",s.y*0.57,18,C.muted)
+ elif event_kind=="support":
+  _center("پشتیبانی آزمایشی؛ تماس واقعی برقرار نمی‌شود",s.y*0.39,14,C.muted)
+  _button(Rect2(s.x*0.14,s.y*0.50,s.x*0.72,58),"پایان تماس نمایشی",C.gold)
+ elif event_kind=="loading" or event_kind=="update":
+  var total:=3
+  var ratio:=float(event_step)/float(total)
+  draw_rect(Rect2(s.x*0.12,s.y*0.43,s.x*0.76,18),C.panel2)
+  draw_rect(Rect2(s.x*0.12,s.y*0.43,s.x*0.76*ratio,18),C.green)
+  _center("%d٪" % int(ratio*100.0),s.y*0.51,20,C.white)
+  _button(Rect2(s.x*0.14,s.y*0.58,s.x*0.72,58),"ادامهٔ پردازش",C.gold)
+ elif event_kind=="form":
+  _center("فرم آزمایشی  •  بخش %d از ۳" % (event_step+1),s.y*0.42,17,C.white)
+  _button(Rect2(s.x*0.14,s.y*0.55,s.x*0.72,58),"ثبت و رفتن به بخش بعد",C.gold)
+ _button(Rect2(20,s.y-76,116,48),"بازگشت به بازی",C.panel)
+
+func _handle_event_action(p:Vector2,travel:float,s:Vector2)->void:
+ if p.y>s.y-100 and p.x<170:
+  screen="game"
+  _save(true)
+  return
+ if event_kind=="captcha" or event_kind=="otp":
+  if p.y>=s.y*0.45 and p.y<s.y*0.69:
+   var w:=s.x*0.22
+   var h:=minf(48.0,s.y*0.065)
+   for i in range(9):
+    var col:=i%3
+    var row:=int(i/3)
+    var r:=Rect2(s.x*0.5+(col-1)*(w+8)-w*0.5,s.y*0.45+row*(h+8),w,h)
+    if r.has_point(p) and event_entry.length()<3:
+     event_entry+=str(i+1)
+     _play_sfx("tap")
+     return
+  elif p.y>=s.y*0.69 and p.y<s.y*0.78:
+   if event_entry==str(event_code):
+    _complete_event()
+   else:
+    event_entry=""
+    _game_miss("کد نمایشی درست وارد نشد؛ دوباره امتحان کن")
+ elif event_kind=="bank" or event_kind=="queue":
+  var y0:=s.y*0.43
+  var index:=int(floor((p.y-y0)/58.0))
+  if index>=0 and index<3:
+   var correct:=posmod(event_code,3)
+   if index==correct: _complete_event()
+   else: _game_miss("این گزینه با درخواست آزمایشی هماهنگ نیست")
+ elif event_kind=="invoice":
+  var index:=int(floor((p.y-s.y*0.40)/55.0))
+  if index>=0 and index<4:
+   if index==posmod(event_code,4): _complete_event()
+   else: _game_miss("ردیف فاکتور هنوز با سفارش مطابقت ندارد")
+ elif event_kind=="signature":
+  if travel>=28.0: _complete_event()
+  else: _game_miss("امضا باید با حرکت انگشت کشیده شود")
+ elif event_kind=="support":
+  if p.y>=s.y*0.50 and p.y<s.y*0.72: _complete_event()
+ elif event_kind=="loading" or event_kind=="update" or event_kind=="form":
+  if p.y>=s.y*0.55 and p.y<s.y*0.73:
+   event_step+=1
+   if event_step>=3:
+    _complete_event()
+   else:
+    _notify("بخش %d از ۳ انجام شد" % event_step)
+    _play_sfx("tap")
+ _save(true)
+ queue_redraw()
+
+func _complete_event()->void:
+ screen="game"
+ event_step=0
+ event_entry=""
+ _notify("بررسی جانبی با موفقیت ثبت شد")
+ _play_sfx("success")
+ _save(true)
 
 func _game_success(message:String)->void:
  mini_state["step"]=int(mini_state.get("step",0))+1
