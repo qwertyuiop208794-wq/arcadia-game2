@@ -27,11 +27,17 @@ jobs:
           PROJECT_DIR="$(dirname "$PROJECT_FILE")"
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
           cp "$GITHUB_WORKSPACE/iran_game.gd" "$PROJECT_DIR/scripts/game.gd"
+          mkdir -p "$PROJECT_DIR/assets"
+          test -s "$GITHUB_WORKSPACE/ending_photo.jpg.b64"
+          base64 --decode "$GITHUB_WORKSPACE/ending_photo.jpg.b64" > "$PROJECT_DIR/assets/ending_photo.jpg"
+          test -s "$PROJECT_DIR/assets/ending_photo.jpg"
+          echo "=== Ending photo included ==="
+          ls -lh "$PROJECT_DIR/assets/ending_photo.jpg"
           sed -i 's@config/name="آرکادیا"@config/name="ایران"@' "$PROJECT_DIR/project.godot"
           sed -i 's/package\/name="آرکادیا"/package\/name="ایران"/' "$PROJECT_DIR/export_presets.cfg"
           sed -i 's/package\/unique_name="com.arcadia.realm"/package\/unique_name="com.iran.game"/' "$PROJECT_DIR/export_presets.cfg"
-          sed -i 's/^version\/code=.*/version\/code=2/' "$PROJECT_DIR/export_presets.cfg"
-          sed -i 's/^version\/name=.*/version\/name="1.0.0"/' "$PROJECT_DIR/export_presets.cfg"
+          sed -i 's/^version\/code=.*/version\/code=3/' "$PROJECT_DIR/export_presets.cfg"
+          sed -i 's/^version\/name=.*/version\/name="1.1.0"/' "$PROJECT_DIR/export_presets.cfg"
           echo "=== Enable Android ETC2/ASTC texture import ==="
           if grep -q 'textures/vram_compression/import_etc2_astc=' "$PROJECT_DIR/project.godot"; then
             sed -i 's@textures/vram_compression/import_etc2_astc=.*@textures/vram_compression/import_etc2_astc=true@' "$PROJECT_DIR/project.godot"
@@ -137,14 +143,14 @@ jobs:
           godot --headless --editor --path "$PROJECT_DIR" --import
           echo "=== Runtime startup smoke test ==="
           godot --headless --path "$PROJECT_DIR" --quit-after 20
-          godot --headless --verbose --path "$PROJECT_DIR" --export-debug "Android" "$GITHUB_WORKSPACE/Arcadia-unsigned.apk"
-          test -s "$GITHUB_WORKSPACE/Arcadia-unsigned.apk"
-          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -f -p 4 "$GITHUB_WORKSPACE/Arcadia-unsigned.apk" "$GITHUB_WORKSPACE/Arcadia-aligned.apk"
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign --ks "$HOME/.android/debug.keystore" --ks-key-alias androiddebugkey --ks-pass pass:android --key-pass pass:android --out "$GITHUB_WORKSPACE/Arcadia-debug.apk" "$GITHUB_WORKSPACE/Arcadia-aligned.apk"
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$GITHUB_WORKSPACE/Arcadia-debug.apk"
-          test -s "$GITHUB_WORKSPACE/Arcadia-debug.apk"
-          ls -lh "$GITHUB_WORKSPACE/Arcadia-debug.apk"
-          file "$GITHUB_WORKSPACE/Arcadia-debug.apk" || true
+          godot --headless --verbose --path "$PROJECT_DIR" --export-debug "Android" "$GITHUB_WORKSPACE/Iran-unsigned.apk"
+          test -s "$GITHUB_WORKSPACE/Iran-unsigned.apk"
+          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -f -p 4 "$GITHUB_WORKSPACE/Iran-unsigned.apk" "$GITHUB_WORKSPACE/Iran-aligned.apk"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign --ks "$HOME/.android/debug.keystore" --ks-key-alias androiddebugkey --ks-pass pass:android --key-pass pass:android --out "$GITHUB_WORKSPACE/Iran.apk" "$GITHUB_WORKSPACE/Iran-aligned.apk"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$GITHUB_WORKSPACE/Iran.apk"
+          test -s "$GITHUB_WORKSPACE/Iran.apk"
+          ls -lh "$GITHUB_WORKSPACE/Iran.apk"
+          file "$GITHUB_WORKSPACE/Iran.apk" || true
 
       - name: Package project source for review
         run: |
@@ -161,6 +167,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Arcadia-Android-APK
-          path: Arcadia-debug.apk
+          name: Iran-Android-APK
+          path: Iran.apk
           if-no-files-found: error
