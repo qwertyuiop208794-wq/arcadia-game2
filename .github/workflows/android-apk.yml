@@ -47,10 +47,8 @@ jobs:
             printf '\n[rendering]\ntextures/vram_compression/import_etc2_astc=true\n' >> "$PROJECT_DIR/project.godot"
           fi
           grep -n 'import_etc2_astc' "$PROJECT_DIR/project.godot"
-          grep -R -n '\.join(' "$PROJECT_DIR/scripts" || true
-          sed -i '682s@.*@	return "  •  ".join(PackedStringArray(parts))@' "$PROJECT_DIR/scripts/game.gd"
-          echo "=== Corrected line ==="
-          sed -n '680,684p' "$PROJECT_DIR/scripts/game.gd"
+          echo "=== Project script loaded ==="
+          wc -l "$PROJECT_DIR/scripts/game.gd"
           echo "=== Export preset ==="
           test -f "$PROJECT_DIR/export_presets.cfg"
           grep -nE '^\[preset|^name=|^platform=|target_sdk|version/code' "$PROJECT_DIR/export_presets.cfg" || true
