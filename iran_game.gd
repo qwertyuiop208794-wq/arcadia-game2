@@ -145,11 +145,12 @@ func _draw() -> void:
  elif screen == "event":
   _draw_event(s)
  elif screen == "ending":
-  _header("پایان مسیر","یادگاری تصویری")
-  _center("به پایان ۸ مرحله رسیدی",s.y*0.24,25,C.gold)
+  _header("پایان مسیر","این مسیر را تو ساختی")
+  _center("تو با انتخاب‌های خودت، مسیرت در ایران را ساختی.",s.y*0.24,20,C.gold)
   _draw_ending_art(s)
-  _center("مسیرت به پایان رسید؛ اما ماجراها ادامه دارند",s.y*0.72,15,C.muted)
-  _button(Rect2(s.x*0.12,s.y*0.79,s.x*0.76,58),"بازگشت به آغاز",C.gold)
+  _center("امیدوارم زندگی‌ات پر از شادی، آرامش و فرصت‌های خوب باشد.",s.y*0.72,14,C.white)
+  _center("و روزهای قشنگ زیادی پیش رویت قرار بگیرد.",s.y*0.755,13,C.muted)
+  _button(Rect2(s.x*0.12,s.y*0.81,s.x*0.76,54),"بازگشت به آغاز",C.gold)
  if toast_timer > 0.0:
   _button(Rect2(s.x*0.08,s.y-132,s.x*0.84,46),toast,C.panel2)
  draw_set_transform(Vector2.ZERO,0.0,Vector2.ONE)
@@ -695,7 +696,7 @@ func _setting_action(index:int)->void:
 func _draw_ending_art(s:Vector2)->void:
  var c:=Vector2(s.x*0.5,s.y*0.49)
  if ending_texture!=null:
-  var area:=Rect2(s.x*0.13,s.y*0.30,s.x*0.74,s.y*0.39)
+  var area:=Rect2(s.x*0.10,s.y*0.30,s.x*0.80,s.y*0.39)
   var tex_size:=Vector2(ending_texture.get_width(),ending_texture.get_height())
   var scale_factor:=minf(area.size.x/tex_size.x,area.size.y/tex_size.y)
   var draw_size:=tex_size*scale_factor
