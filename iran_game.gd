@@ -713,17 +713,58 @@ func _input(event:InputEvent)->void:
 func _tap(p:Vector2,travel:float)->void:
  var s:=get_viewport_rect().size
  if screen=="splash":
-  screen="home"
+  screen="profile_select"
  elif screen=="home":
-  if p.x>s.x-100 and p.y<120:
-   screen="admin"
+  if p.x<155 and p.y<100:
+   screen="profile_select"
+  elif p.x>s.x-100 and p.y<120:
+   screen="settings"
   elif p.y>s.y*0.5 and p.y<s.y*0.75:
    screen="stages"
+ elif screen=="profile_select":
+  if p.y>s.y-100:
+   screen="home"
+  else:
+   var h:=minf(62.0,s.y*0.075)
+   var y:=s.y*0.22
+   var selected:=-1
+   for i in range(profile_names.size()):
+    var r:=Rect2(s.x*0.09,y+i*(h+10),s.x*0.82,h)
+    if r.has_point(p):
+     selected=i
+   if selected>=0:
+    _select_profile(selected)
+   elif p.y>=y+profile_names.size()*(h+12) and p.y<=y+profile_names.size()*(h+12)+60:
+    if profile_names.size()<MAX_PROFILES:
+     screen="profile_create"
+     profile_input.visible=true
+     profile_input.text=""
+     profile_input.grab_focus()
+    else:
+     _notify("حداکثر ۵ پروفایل می‌توان ساخت")
+ elif screen=="profile_create":
+  if p.y>s.y-100:
+   screen="profile_select"
+   profile_input.visible=false
+  elif p.y>s.y*0.58 and p.y<s.y*0.72:
+   _create_profile()
+ elif screen=="settings":
+  if p.y>s.y-100 and p.x<170:
+   screen="home"
+  else:
+   var row_h:=minf(47.0,s.y*0.054)
+   var step:=minf(58.0,s.y*0.064)
+   var y0:=s.y*0.16
+   var row:=int(floor((p.y-y0)/step))
+   var col:=0 if p.x<s.x*0.5 else 1
+   var index:=row*2+col
+   if row>=0 and row<8 and p.y<=y0+row*step+row_h:
+    _setting_action(index)
  elif screen=="stages":
   if p.y>s.y-100:
    screen="home"
   elif p.x>s.x-100 and p.y<120:
-   screen="admin"
+   screen="settings"
   else:
    var opts:Array=STAGES[stage]["opts"]
    var h:=minf(66.0,(s.y*0.56)/opts.size())
@@ -736,100 +777,27 @@ func _tap(p:Vector2,travel:float)->void:
       stage=7
      else:
       screen="stages"
+     _play_sfx("success")
      _save()
     else:
      active_option=idx
      active_game=int(STAGES[stage]["games"][idx])
+     _start_minigame(active_game)
      screen="game"
+     _play_sfx("move")
      _save()
  elif screen=="game":
   if p.y>s.y-105 and p.x<190:
    screen="stages"
    _save()
    return
-  if p.y>s.y*0.69 and p.y<s.y*0.84:
-   _advance_game()
-  elif p.y>s.y*0.38 and p.y<s.y*0.69:
-   if active_game in [5,9,18,19,25,27,28,29]:
-    if travel>=28.0:
-     puzzle_rotation=posmod(puzzle_rotation+1,8)
-     _advance_game()
-    else:
-     _notify("برای این بازی حرکت را بکش")
-   else:
-    puzzle_rotation=posmod(puzzle_rotation+1,8)
-    _advance_game()
+  if (p.y>s.y*0.69 and p.y<s.y*0.84) or (p.y>s.y*0.38 and p.y<s.y*0.69):
+   _handle_minigame_action(p,travel,s)
   _save()
- elif screen=="admin":
-  if p.y>s.y-100 and p.x<170:
-   screen="home"
-   return
-  if not admin_unlocked:
-   var key:=_admin_key_at(p,s)
-   if key=="پاک":
-    admin_text=admin_text.left(maxi(0,admin_text.length()-1))
-   elif key=="تأیید":
-    if admin_text.length()!=6:
-     _notify("رمز باید ۶ رقم باشد")
-    elif admin_pin=="" or admin_changing_pin:
-     admin_pin=admin_text
-     admin_text=""
-     admin_changing_pin=false
-     admin_unlocked=true
-     _notify("رمز جدید ثبت شد")
-     _save(true)
-    elif admin_text==admin_pin:
-     admin_text=""
-     admin_unlocked=true
-     _notify("ورود موفق")
-    else:
-     admin_text=""
-     _notify("رمز نادرست است")
-   elif key.is_valid_int() and admin_text.length()<6:
-    admin_text+=key
-  else:
-   var row_h:=minf(48.0,s.y*0.068)
-   var step:=minf(60.0,s.y*0.085)
-   var y0:=s.y*0.21
-   var row:=int(floor((p.y-y0)/step))
-   var col:=0 if p.x<s.x*0.5 else 1
-   var control:=row*2+col
-   if row>=0 and row<6 and p.y<=y0+row*step+row_h:
-    match control:
-     0: settings["music"]=not bool(settings["music"])
-     1: settings["effects"]=not bool(settings["effects"])
-     2: settings["volume"]=posmod(int(settings["volume"])-1+20,100)+1
-     3: settings["animation_speed"]=posmod(int(settings["animation_speed"])+1,3)
-     4: settings["difficulty"]=posmod(int(settings["difficulty"])+1,3)
-     5: settings["visual_effects"]=not bool(settings["visual_effects"])
-     6: settings["theme"]=posmod(int(settings["theme"])+1,4)
-     7: settings["auto_save"]=not bool(settings["auto_save"])
-     8:
-      admin_changing_pin=true
-      admin_unlocked=false
-      admin_text=""
-     9:
-      stage=0
-      active_game=-1
-      active_option=-1
-      progress=0
-      target=200
-      round_no=1
-      task_index=0
-      total_actions=0
-      completed_choices.clear()
-      screen="home"
-      _notify("بازی از ابتدا آغاز شد")
-     10:
-      _save(true)
-      _notify("ذخیره شد")
-     11:
-      _notify("جای ویدیوی پایانی فعلاً خالی است")
-   _apply_audio_settings()
-   _save(true)
  elif screen=="ending":
   screen="home"
-  stage=0
+  _play_sfx("success")
+  _save(true)
  queue_redraw()
 
 func _advance_game()->void:
@@ -861,36 +829,56 @@ func _save(force:bool=false)->void:
  if not force and not bool(settings.get("auto_save",true)):
   return
  config.set_value("progress","stage",stage)
- config.set_value("progress","screen",screen)
  config.set_value("progress","active_game",active_game)
+ config.set_value("progress","active_option",active_option)
  config.set_value("progress","progress",progress)
  config.set_value("progress","target",target)
  config.set_value("progress","total_actions",total_actions)
  config.set_value("progress","round_no",round_no)
  config.set_value("progress","task_index",task_index)
- config.set_value("admin","pin",admin_pin)
- config.set_value("admin","ending_video",ending_video)
+ config.set_value("progress","puzzle_rotation",puzzle_rotation)
+ config.set_value("progress","completed_choices",completed_choices)
  config.set_value("settings","all",settings)
- config.save(SAVE_PATH)
+ config.save(_profile_path(current_profile))
 
 func _load_save()->void:
- if config.load(SAVE_PATH)!=OK:
+ config=ConfigFile.new()
+ stage=0
+ active_game=-1
+ active_option=-1
+ progress=0
+ target=200
+ total_actions=0
+ round_no=1
+ task_index=0
+ puzzle_rotation=0
+ completed_choices.clear()
+ mini_state.clear()
+ settings={
+  "music":true,"effects":true,"volume":80,
+  "music_volume":45,"effects_volume":75,
+  "animation_speed":1,"difficulty":1,
+  "visual_effects":true,"theme":0,"auto_save":true,
+  "screen_shake":true,"particles":true,"haptics":true
+ }
+ if config.load(_profile_path(current_profile))!=OK:
+  _apply_audio_settings()
   return
  stage=clampi(int(config.get_value("progress","stage",0)),0,7)
  active_game=int(config.get_value("progress","active_game",-1))
- progress=int(config.get_value("progress","progress",0))
+ active_option=int(config.get_value("progress","active_option",-1))
+ progress=maxi(0,int(config.get_value("progress","progress",0)))
  target=maxi(200,int(config.get_value("progress","target",200)))
- total_actions=int(config.get_value("progress","total_actions",0))
+ total_actions=maxi(0,int(config.get_value("progress","total_actions",0)))
  round_no=maxi(1,int(config.get_value("progress","round_no",1)))
- task_index=int(config.get_value("progress","task_index",0))
- admin_pin=str(config.get_value("admin","pin",""))
- if admin_pin == "2468" or admin_pin == "1357":
-  admin_pin = ""
- ending_video=str(config.get_value("admin","ending_video",""))
+ task_index=maxi(0,int(config.get_value("progress","task_index",0)))
+ puzzle_rotation=int(config.get_value("progress","puzzle_rotation",0))
+ var choices:Variant=config.get_value("progress","completed_choices",[])
+ if choices is Array:
+  completed_choices=choices
  var saved:Variant=config.get_value("settings","all",{})
  if saved is Dictionary:
   for key in settings.keys():
    if saved.has(key):
     settings[key]=saved[key]
- admin_unlocked=false
  _apply_audio_settings()
