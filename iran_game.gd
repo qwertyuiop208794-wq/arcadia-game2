@@ -394,60 +394,130 @@ func _action_label() -> String:
   29: return "تکمیل تغییر استایل"
   _: return "انجام حرکت بعدی"
 
-func _draw_admin(s: Vector2) -> void:
- _header("پنل سازنده","تنظیمات محلی و آفلاین")
- if not admin_unlocked:
-  var prompt := "یک رمز ۶ رقمی برای پنل بساز" if admin_pin == "" or admin_changing_pin else "رمز ۶ رقمی پنل را وارد کن"
-  _center(prompt,s.y*0.25,19,C.white)
-  _center("●".repeat(admin_text.length()),s.y*0.34,24,C.gold)
-  var keys := ["1","2","3","4","5","6","7","8","9","پاک","0","تأیید"]
-  var key_w := s.x*0.22
-  var key_h := minf(48.0,s.y*0.07)
-  for i in range(keys.size()):
-   var col := i%3
-   var row := int(i/3)
-   var r := Rect2(s.x*(0.5+(col-1)*0.25)-key_w*0.5,s.y*0.41+row*(key_h+7),key_w,key_h)
-   _button(r,keys[i],C.panel2 if i != 11 else C.gold)
- else:
-  _center("وضعیت بازی",s.y*0.17,17,C.muted)
-  var step := minf(60.0,s.y*0.085)
-  var row_h := minf(48.0,s.y*0.068)
-  var y0 := s.y*0.21
-  var labels := [
-   "موسیقی: "+("روشن" if settings["music"] else "خاموش"),
-   "افکت‌ها: "+("روشن" if settings["effects"] else "خاموش"),
-   "صدای کلی: %d٪" % int(settings["volume"]),
-   "سرعت انیمیشن: "+_animation_label(),
-   "سختی: "+_difficulty_label(),
-   "جلوه‌ها: "+("روشن" if settings["visual_effects"] else "خاموش"),
-   "پس‌زمینه: "+_theme_label(),
-   "ذخیره خودکار: "+("روشن" if settings["auto_save"] else "خاموش"),
-   "تغییر رمز پنل",
-   "شروع دوباره بازی",
-   "ذخیره همین حالا",
-   "ویدیوی پایانی: فعلاً خالی"
-  ]
-  for i in range(labels.size()):
-   var col := i%2
-   var row := int(i/2)
-   var x := s.x*(0.06 if col == 0 else 0.52)
-   _button(Rect2(x,y0+row*step,s.x*0.42,row_h),labels[i],C.panel2 if i != 11 else Color("#34414a"))
-  var percent := int(round(float(stage+(1 if screen=="ending" else 0))*100.0/8.0))
-  _center("پیشرفت: %d٪  |  عملیات: %d" % [percent,total_actions],s.y*0.79,14,C.gold)
-  _center("مرحله فعلی: %d از ۸" % (stage+1),s.y*0.84,13,C.muted)
+func _draw_profile_select(s:Vector2)->void:
+ _header("انتخاب بازیکن","هر بازیکن ذخیره و تنظیمات جداگانه دارد")
+ var h:=minf(62.0,s.y*0.075)
+ var y:=s.y*0.22
+ for i in range(profile_names.size()):
+  var r:=Rect2(s.x*0.09,y+i*(h+10),s.x*0.82,h)
+  _button(r,profile_names[i],C.panel2 if i!=current_profile else Color("#304638"))
+ _button(Rect2(s.x*0.12,y+profile_names.size()*(h+12),s.x*0.76,54),"ساخت پروفایل جدید",C.gold)
+ _center("تا ۵ پروفایل محلی روی همین گوشی",s.y*0.86,13,C.muted)
  _button(Rect2(20,s.y-76,116,48),"بازگشت",C.panel)
 
-func _admin_key_at(p:Vector2,s:Vector2)->String:
- var keys := ["1","2","3","4","5","6","7","8","9","پاک","0","تأیید"]
- var key_w := s.x*0.22
- var key_h := minf(48.0,s.y*0.07)
- for i in range(keys.size()):
-  var col := i%3
-  var row := int(i/3)
-  var r := Rect2(s.x*(0.5+(col-1)*0.25)-key_w*0.5,s.y*0.41+row*(key_h+7),key_w,key_h)
-  if r.has_point(p):
-   return keys[i]
- return ""
+func _draw_profile_create(s:Vector2)->void:
+ _header("پروفایل تازه","نام دلخواه بازیکن را وارد کن")
+ _center("این پروفایل پیشرفت و تنظیمات مستقل دارد",s.y*0.30,16,C.white)
+ _center("نام بازیکن",s.y*0.40,15,C.gold)
+ _button(Rect2(s.x*0.12,s.y*0.62,s.x*0.76,54),"ساخت و ورود",C.gold)
+ _button(Rect2(20,s.y-76,116,48),"انصراف",C.panel)
+
+func _draw_settings(s:Vector2)->void:
+ _header("پروفایل و تنظیمات","تنظیمات فقط برای "+_current_profile_name())
+ var labels:=[]
+ labels.append("موسیقی: "+("روشن" if settings["music"] else "خاموش"))
+ labels.append("افکت صوتی: "+("روشن" if settings["effects"] else "خاموش"))
+ labels.append("صدای کلی: %d٪" % int(settings["volume"]))
+ labels.append("موسیقی: %d٪" % int(settings["music_volume"]))
+ labels.append("افکت‌ها: %d٪" % int(settings["effects_volume"]))
+ labels.append("سرعت انیمیشن: "+_animation_label())
+ labels.append("درجه سختی: "+_difficulty_label())
+ labels.append("جلوه‌های تصویری: "+("روشن" if settings["visual_effects"] else "خاموش"))
+ labels.append("لرزش صفحه: "+("روشن" if settings["screen_shake"] else "خاموش"))
+ labels.append("ذرات تصویری: "+("روشن" if settings["particles"] else "خاموش"))
+ labels.append("لرزش گوشی: "+("روشن" if settings["haptics"] else "خاموش"))
+ labels.append("ذخیره خودکار: "+("روشن" if settings["auto_save"] else "خاموش"))
+ labels.append("رنگ محیط: "+_theme_label())
+ labels.append("تعویض بازیکن")
+ labels.append("شروع دوباره از مرحله اول")
+ labels.append("ذخیره تنظیمات و پیشرفت")
+ var step:=minf(58.0,s.y*0.064)
+ var row_h:=minf(47.0,s.y*0.054)
+ var y0:=s.y*0.16
+ for i in range(labels.size()):
+  var col:=i%2
+  var row:=int(i/2)
+  var x:=s.x*(0.055 if col==0 else 0.515)
+  _button(Rect2(x,y0+row*step,s.x*0.43,row_h),labels[i],C.panel2 if i<13 else C.panel)
+ var percent:=int(round(float(stage+int(screen=="ending"))*12.5))
+ _center("پیشرفت: %d٪  |  عملیات انجام‌شده: %d" % [percent,total_actions],s.y*0.78,14,C.gold)
+ _center("مرحله فعلی: %d از ۸" % (stage+1),s.y*0.83,13,C.muted)
+ _button(Rect2(20,s.y-76,116,48),"بازگشت",C.panel)
+
+func _load_profiles()->void:
+ var meta:=ConfigFile.new()
+ if meta.load(PROFILE_INDEX_PATH)==OK:
+  var loaded:Variant=meta.get_value("profiles","names",["بازیکن ۱"])
+  profile_names.clear()
+  if loaded is Array:
+   for item in loaded:
+    if profile_names.size()<MAX_PROFILES:
+     profile_names.append(str(item))
+ if profile_names.is_empty():
+  profile_names.append("بازیکن ۱")
+ current_profile=clampi(int(meta.get_value("profiles","active",0)),0,profile_names.size()-1)
+ _save_profiles()
+
+func _save_profiles()->void:
+ var meta:=ConfigFile.new()
+ meta.set_value("profiles","names",profile_names)
+ meta.set_value("profiles","active",current_profile)
+ meta.save(PROFILE_INDEX_PATH)
+
+func _profile_path(index:int)->String:
+ return PROFILE_DIR+"/player_%02d.cfg" % [index+1]
+
+func _current_profile_name()->String:
+ if current_profile>=0 and current_profile<profile_names.size():
+  return profile_names[current_profile]
+ return "بازیکن"
+
+func _build_profile_input()->void:
+ profile_input=LineEdit.new()
+ profile_input.placeholder_text="مثلاً آرش"
+ profile_input.alignment=HORIZONTAL_ALIGNMENT_CENTER
+ profile_input.max_length=24
+ profile_input.add_theme_font_override("font",FONT_REGULAR)
+ profile_input.add_theme_font_size_override("font_size",22)
+ profile_input.add_theme_color_override("font_color",C.white)
+ profile_input.add_theme_color_override("font_placeholder_color",C.muted)
+ profile_input.visible=false
+ add_child(profile_input)
+ _on_viewport_resized()
+
+func _on_viewport_resized()->void:
+ if is_instance_valid(profile_input):
+  var s:=get_viewport_rect().size
+  profile_input.position=Vector2(s.x*0.12,s.y*0.46)
+  profile_input.size=Vector2(s.x*0.76,64)
+ queue_redraw()
+
+func _create_profile()->void:
+ if profile_names.size()>=MAX_PROFILES:
+  _notify("حداکثر ۵ پروفایل می‌توان ساخت")
+  return
+ var name:=profile_input.text.strip_edges()
+ if name.is_empty():
+  name="بازیکن "+str(profile_names.size()+1)
+ profile_names.append(name)
+ current_profile=profile_names.size()-1
+ _save_profiles()
+ profile_input.text=""
+ profile_input.visible=false
+ _load_save()
+ screen="home"
+ _play_sfx("success")
+
+func _select_profile(index:int)->void:
+ if index<0 or index>=profile_names.size():
+  return
+ current_profile=index
+ _save_profiles()
+ _load_save()
+ screen="home"
+ if is_instance_valid(profile_input):
+  profile_input.visible=false
+ _play_sfx("tap")
 
 func _animation_multiplier()->float:
  return [0.65,1.0,1.4][clampi(int(settings.get("animation_speed",1)),0,2)]
@@ -468,11 +538,135 @@ func _background_color()->Color:
   3: return Color("#20172b")
   _: return C.bg
 
+func _setup_audio()->void:
+ music_player=AudioStreamPlayer.new()
+ music_player.name="BackgroundMusic"
+ add_child(music_player)
+ sfx_player=AudioStreamPlayer.new()
+ sfx_player.name="SoundEffects"
+ add_child(sfx_player)
+ music_player.stream=_make_music_stream()
+ music_player.play()
+ sound_ready=true
+ _apply_audio_settings()
+
+func _make_music_stream()->AudioStreamWAV:
+ var rate:=22050
+ var count:=rate*6
+ var data:=PackedByteArray()
+ data.resize(count*2)
+ var notes:=[220.0,261.63,293.66,329.63,293.66,261.63,196.0,220.0]
+ for i in range(count):
+  var note_index:=int(float(i)/float(rate)*1.333333)%notes.size()
+  var local_time:=fmod(float(i)/float(rate),0.75)
+  var envelope:=minf(1.0,local_time*12.0)*minf(1.0,(0.75-local_time)*7.0)
+  var wave:=sin(TAU*notes[note_index]*float(i)/float(rate))
+  var sample:=int(clampf(wave*envelope*0.055,-1.0,1.0)*32767.0)
+  data.encode_s16(i*2,sample)
+ var stream:=AudioStreamWAV.new()
+ stream.format=AudioStreamWAV.FORMAT_16_BITS
+ stream.mix_rate=rate
+ stream.stereo=false
+ stream.data=data
+ stream.loop_mode=AudioStreamWAV.LOOP_FORWARD
+ stream.loop_begin=0
+ stream.loop_end=count
+ return stream
+
+func _make_sfx_stream(kind:String)->AudioStreamWAV:
+ var rate:=22050
+ var count:=int(rate*0.16)
+ var freq:=520.0
+ if kind=="success": freq=780.0
+ elif kind=="error": freq=180.0
+ elif kind=="move": freq=340.0
+ var data:=PackedByteArray()
+ data.resize(count*2)
+ for i in range(count):
+  var t:=float(i)/float(rate)
+  var env:=pow(1.0-float(i)/float(count),2.0)
+  var wave:=sin(TAU*freq*t)
+  data.encode_s16(i*2,int(wave*env*0.22*32767.0))
+ var stream:=AudioStreamWAV.new()
+ stream.format=AudioStreamWAV.FORMAT_16_BITS
+ stream.mix_rate=rate
+ stream.stereo=false
+ stream.data=data
+ return stream
+
+func _play_sfx(kind:String="tap")->void:
+ if not sound_ready or not bool(settings.get("effects",true)):
+  return
+ sfx_player.stop()
+ sfx_player.stream=_make_sfx_stream(kind)
+ sfx_player.volume_db=linear_to_db(maxf(0.001,float(settings.get("volume",80))/100.0*float(settings.get("effects_volume",75))/100.0))
+ sfx_player.play()
+ if bool(settings.get("haptics",true)):
+  Input.vibrate_handheld(18)
+
 func _apply_audio_settings()->void:
- var master := AudioServer.get_bus_index("Master")
- if master >= 0:
-  AudioServer.set_bus_mute(master,not bool(settings.get("music",true)) and not bool(settings.get("effects",true)))
-  AudioServer.set_bus_volume_db(master,linear_to_db(maxf(0.001,float(settings.get("volume",80))/100.0)))
+ if not sound_ready:
+  return
+ var master:=maxf(0.001,float(settings.get("volume",80))/100.0)
+ music_player.stream_paused=not bool(settings.get("music",true))
+ music_player.volume_db=linear_to_db(maxf(0.001,master*float(settings.get("music_volume",45))/100.0))
+ if sfx_player:
+  sfx_player.volume_db=linear_to_db(maxf(0.001,master*float(settings.get("effects_volume",75))/100.0))
+
+func _setting_action(index:int)->void:
+ match index:
+  0: settings["music"]=not bool(settings["music"])
+  1: settings["effects"]=not bool(settings["effects"])
+  2: settings["volume"]=posmod(int(settings["volume"])+10,110)
+  3: settings["music_volume"]=posmod(int(settings["music_volume"])+10,110)
+  4: settings["effects_volume"]=posmod(int(settings["effects_volume"])+10,110)
+  5: settings["animation_speed"]=posmod(int(settings["animation_speed"])+1,3)
+  6: settings["difficulty"]=posmod(int(settings["difficulty"])+1,3)
+  7: settings["visual_effects"]=not bool(settings["visual_effects"])
+  8: settings["screen_shake"]=not bool(settings["screen_shake"])
+  9: settings["particles"]=not bool(settings["particles"])
+  10: settings["haptics"]=not bool(settings["haptics"])
+  11: settings["auto_save"]=not bool(settings["auto_save"])
+  12: settings["theme"]=posmod(int(settings["theme"])+1,4)
+  13:
+   _save(true)
+   screen="profile_select"
+   _play_sfx("tap")
+   return
+  14:
+   stage=0
+   active_game=-1
+   active_option=-1
+   progress=0
+   target=200
+   total_actions=0
+   round_no=1
+   task_index=0
+   completed_choices.clear()
+   _save(true)
+   _notify("پیشرفت این پروفایل از ابتدا آغاز شد")
+  15:
+   _save(true)
+   _notify("پیشرفت و تنظیمات ذخیره شد")
+ _apply_audio_settings()
+ _play_sfx("tap")
+ _save(true)
+
+func _draw_ending_art(s:Vector2)->void:
+ var c:=Vector2(s.x*0.5,s.y*0.49)
+ draw_circle(c,105,Color("#263844"))
+ for i in range(3):
+  var x:=c.x+(i-1)*86
+  var body:=Rect2(x-30,c.y-58,60,112)
+  draw_rect(body,Color("#f2c637"),true,27)
+  draw_circle(Vector2(x-9,c.y-16),11,C.white)
+  draw_circle(Vector2(x+9,c.y-16),11,C.white)
+  draw_circle(Vector2(x-9,c.y-16),4,C.bg)
+  draw_circle(Vector2(x+9,c.y-16),4,C.bg)
+  draw_rect(Rect2(x-26,c.y+20,52,34),Color("#3b74a3"),true,8)
+  draw_line(Vector2(x-27,c.y+28),Vector2(x-48,c.y+63),C.bg,5)
+  draw_line(Vector2(x+27,c.y+28),Vector2(x+48,c.y+63),C.bg,5)
+ _center("مأموریت به پایان رسید!",c.y+135,16,C.gold)
 
 func _center(t:String,y:float,size:int,color:Color) -> void:
  var w:=get_viewport_rect().size.x
