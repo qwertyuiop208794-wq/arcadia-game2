@@ -2,14 +2,4 @@
   <rect width="512" height="170.67" fill="#239f40"/>
   <rect y="170.67" width="512" height="170.66" fill="#ffffff"/>
   <rect y="341.33" width="512" height="170.67" fill="#da0000"/>
-  <g transform="translate(256 256)" fill="#da0000">
-    <!-- Stylized tulip-and-sword emblem used on the Iranian flag -->
-    <path d="M-7-83 L7-83 L10-32 L23-10 L11 5 L11 50 L0 83 L-11 50 L-11 5 L-23-10 L-10-32 Z"/>
-    <path d="M-10-27 C-35-60-69-66-83-42 C-99-13-74 23-20 47 C-49 17-57-7-43-25 C-33-39-20-35-10-27 Z"/>
-    <path d="M10-27 C35-60 69-66 83-42 C99-13 74 23 20 47 C49 17 57-7 43-25 C33-39 20-35 10-27 Z"/>
-    <path d="M-5-54 C-30-78-51-78-65-62 C-44-70-27-65-5-45 Z"/>
-    <path d="M5-54 C30-78 51-78 65-62 C44-70 27-65 5-45 Z"/>
-    <path d="M-28 11 Q-46 4-54-10 Q-45 16-24 29 Z"/>
-    <path d="M28 11 Q46 4 54-10 Q45 16 24 29 Z"/>
-  </g>
 </svg>
