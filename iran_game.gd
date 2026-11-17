@@ -142,7 +142,7 @@ func _draw() -> void:
   var y0:=s.y*0.29
   for i in range(opts.size()):
    var r:=Rect2(s.x*0.07,y0+i*(h+9),s.x*0.86,h)
-   var color:=Color("#314a3e") if i==int(STAGES[stage]["pass"]) else Color("#243744")
+   var color:=Color("#243744")
    _button(r,String(opts[i]),color)
   _center("یکی از گزینه‌ها را انتخاب کن",s.y*0.86,13,C.muted)
   _button(Rect2(20,s.y-76,116,48),"بازگشت",C.panel)
