@@ -215,7 +215,7 @@ func _draw_minigame_board(s: Vector2) -> void:
    _center("رمز بعدی: خانهٔ %d" % (target_slot+1),c.y+122,14,C.gold)
   1:
    _center("فهرست هزینه‌های امروز",c.y-90,15,C.muted)
-   _center("بودجه: %d  |  مصرف‌شده: %d" % [int(mini_state.get("budget",100)),int(mini_state.get("spent",0))],c.y-112,12,C.gold)
+   _center("بودجه: %d  |  مصرف‌شده: %d" % [int(mini_state.get("budget",100)),int(mini_state.get("spent",0))],c.y-67,12,C.gold)
    for i in range(4):
     var r:=Rect2(c.x-135+(i%2)*140,c.y-65+int(i/2)*78,125,64)
     _button(r,["سفر لوکس","رستوران","پوشاک","تفریح"][i],C.panel2)
@@ -370,6 +370,7 @@ func _draw_minigame_board(s: Vector2) -> void:
     _button(Rect2(c.x-155+i*80,c.y+65,70,42),str(gross-300+i*100),C.panel2)
   17:
    _center("سبد خرید و بودجه",c.y-95,15,C.muted)
+   _center("بودجه: %d  |  خرج‌شده: %d" % [int(mini_state.get("budget",120)),int(mini_state.get("spent",0))],c.y-67,13,C.gold)
    for i in range(4):
     var x:=c.x-155+i*82
     draw_rect(Rect2(x,c.y-55,68,124),C.panel2)
@@ -460,7 +461,7 @@ func _draw_minigame_board(s: Vector2) -> void:
    _center("با کشیدن انگشت حرکت کن",c.y+120,13,C.gold)
   26:
    var style_labels:Array=["کلاسیک","رسمی","مدرن"]
-   var requested_style:=posmod(task_index+round_no,3)
+   var requested_style:=posmod(task_index+round_no+int(mini_state.get("turn",0)),3)
    _center("درخواست مشتری: "+style_labels[requested_style],c.y-95,15,C.gold)
    for i in range(3):
     var x:=c.x-145+i*145
@@ -1324,7 +1325,7 @@ func _handle_minigame_action(p:Vector2,travel:float,s:Vector2)->void:
     _game_miss("این راه به بن‌بست می‌رسد؛ مسیر را دوباره پیدا کن")
   26:
    cell=_cell_index(p,Rect2(center.x-155,center.y-62,310,150),3,1)
-   var expected_style:=posmod(task_index+round_no,3)
+   var expected_style:=posmod(task_index+round_no+turn,3)
    if cell==expected_style:
     mini_state["score"]=int(mini_state.get("score",0))+1
     _game_success("استایل مطابق درخواست مشتری انتخاب شد")
