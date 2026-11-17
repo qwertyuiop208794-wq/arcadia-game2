@@ -788,6 +788,15 @@ func _background_color()->Color:
   3: return Color("#20172b")
   _: return C.bg
 
+func _exit_tree()->void:
+ sound_ready=false
+ if music_player!=null and is_instance_valid(music_player):
+  music_player.stop()
+  music_player.stream=null
+ if sfx_player!=null and is_instance_valid(sfx_player):
+  sfx_player.stop()
+  sfx_player.stream=null
+
 func _setup_audio()->void:
  music_player=AudioStreamPlayer.new()
  music_player.name="BackgroundMusic"
