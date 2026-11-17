@@ -52,7 +52,7 @@ jobs:
           if grep -q '^permissions/vibrate=' "$PROJECT_DIR/export_presets.cfg"; then
             sed -i 's@^permissions/vibrate=.*@permissions/vibrate=true@' "$PROJECT_DIR/export_presets.cfg"
           else
-            sed -i '/^permissions/internet=/a permissions/vibrate=true' "$PROJECT_DIR/export_presets.cfg"
+            sed -i '/^permissions\/internet=/a permissions/vibrate=true' "$PROJECT_DIR/export_presets.cfg"
           fi
           echo "=== Offline and haptic permissions ==="
           grep -nE '^permissions/(internet|vibrate)=' "$PROJECT_DIR/export_presets.cfg"
