@@ -770,7 +770,7 @@ func _draw_rounded_outline(r:Rect2,color:Color,radius:float,width:float=1.0)->vo
 
 func _button(r:Rect2,t:String,color:Color) -> void:
  var radius:=minf(16.0,r.size.y*0.34)
- _draw_rounded_rect(r.position+Vector2(0,4),r.size==Vector2.ZERO?color.darkened(0.3):color.darkened(0.32),radius)
+ _draw_rounded_rect(r.position+Vector2(0,4),color.darkened(0.32),radius)
  _draw_rounded_rect(r,color,radius)
  _draw_rounded_outline(r,Color(1,1,1,0.10),radius,1.2)
  draw_line(Vector2(r.position.x+radius,r.position.y+1),Vector2(r.position.x+r.size.x-radius,r.position.y+1),Color(1,1,1,0.13),1.0)
