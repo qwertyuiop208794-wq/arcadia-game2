@@ -182,6 +182,10 @@ jobs:
             echo "Godot runtime reported an engine, script, or resource-lifetime error."
             exit 1
           fi
+          if grep -E "^Leaked instance: AudioStreamWAV|^Leaked instance: AudioStreamPlaybackWAV" "$GITHUB_WORKSPACE/godot-runtime.log"; then
+            echo "Godot runtime left generated audio resources alive at shutdown."
+            exit 1
+          fi
           echo "=== Android export ==="
           godot --headless --verbose --path "$PROJECT_DIR" --export-debug "Android" "$GITHUB_WORKSPACE/Iran-unsigned.apk" 2>&1 | tee "$GITHUB_WORKSPACE/godot-export.log"
           if grep -E "SCRIPT ERROR: Parse Error|ERROR: Failed to load script|Parse Error:" "$GITHUB_WORKSPACE/godot-export.log"; then
