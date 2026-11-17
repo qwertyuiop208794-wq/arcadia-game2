@@ -67,7 +67,10 @@ func _ready() -> void:
  if ResourceLoader.exists("res://assets/boot_splash.svg"):
   splash_texture=load("res://assets/boot_splash.svg")
  _load_save()
- _setup_audio()
+ if DisplayServer.get_name()!="headless":
+  _setup_audio()
+ else:
+  sound_ready=false
  _setup_3d_city()
  get_viewport().size_changed.connect(_on_viewport_resized)
  screen="splash"
