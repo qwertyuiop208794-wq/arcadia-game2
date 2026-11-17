@@ -111,9 +111,9 @@ func _draw() -> void:
  if screen=="splash":
   if splash_texture!=null:
    draw_texture_rect(splash_texture,Rect2(Vector2.ZERO,s),false)
-  else:
-   _center("ساخته شده توسط",s.y*0.55,42,C.gold)
-   _center("خلیل",s.y*0.65,58,C.white)
+  _center("ساخته شده توسط",s.y*0.48,34,C.gold)
+  draw_line(Vector2(s.x*0.34,s.y*0.505),Vector2(s.x*0.66,s.y*0.505),C.gold,2.0)
+  _center("خلیل",s.y*0.59,60,C.white)
  elif screen=="intro":
   _draw_intro(s)
  elif screen=="home":
