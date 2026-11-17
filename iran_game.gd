@@ -159,8 +159,8 @@ func _draw() -> void:
 
 func _draw_intro(s:Vector2)->void:
  var card:=Rect2(s.x*0.07,s.y*0.20,s.x*0.86,s.y*0.57)
- draw_rect(card,C.panel,true)
- draw_rect(card.grow(1),Color(1,1,1,0.10),false,2)
+ _draw_rounded_rect(card,C.panel,22.0)
+ _draw_rounded_outline(card,Color(1,1,1,0.12),22.0,2.0)
  draw_circle(Vector2(s.x*0.5,s.y*0.31),45,Color("#304638"))
  draw_arc(Vector2(s.x*0.5,s.y*0.31),43,0,TAU,64,C.gold,2)
  _center("الان توی ایران به دنیا اومدی!",s.y*0.43,23,C.gold)
@@ -743,9 +743,37 @@ func _header(title:String,sub:String) -> void:
  if screen!="settings" and screen!="ending":
   _button(Rect2(s.x-72,28,52,48),"⚙",C.panel2)
 
+func _rounded_points(r:Rect2,radius:float)->PackedVector2Array:
+ var rad:=clampf(radius,0.0,minf(r.size.x,r.size.y)*0.5)
+ var centers:Array=[
+  Vector2(r.position.x+rad,r.position.y+rad),
+  Vector2(r.position.x+r.size.x-rad,r.position.y+rad),
+  Vector2(r.position.x+r.size.x-rad,r.position.y+r.size.y-rad),
+  Vector2(r.position.x+rad,r.position.y+r.size.y-rad)
+ ]
+ var starts:Array=[PI,PI*1.5,0.0,PI*0.5]
+ var points:=PackedVector2Array()
+ for corner in range(4):
+  for step in range(9):
+   var angle:float=float(starts[corner])+PI*0.5*float(step)/8.0
+   points.append(centers[corner]+Vector2(cos(angle),sin(angle))*rad)
+ points.append(points[0])
+ return points
+
+func _draw_rounded_rect(r:Rect2,color:Color,radius:float)->void:
+ var points:=_rounded_points(r,radius)
+ draw_colored_polygon(points,color)
+
+func _draw_rounded_outline(r:Rect2,color:Color,radius:float,width:float=1.0)->void:
+ var points:=_rounded_points(r,radius)
+ draw_polyline(points,color,width,true)
+
 func _button(r:Rect2,t:String,color:Color) -> void:
- draw_rect(r,color,true)
- draw_rect(r,Color(1,1,1,0.09),false,1.0)
+ var radius:=minf(16.0,r.size.y*0.34)
+ _draw_rounded_rect(r.position+Vector2(0,4),r.size==Vector2.ZERO?color.darkened(0.3):color.darkened(0.32),radius)
+ _draw_rounded_rect(r,color,radius)
+ _draw_rounded_outline(r,Color(1,1,1,0.10),radius,1.2)
+ draw_line(Vector2(r.position.x+radius,r.position.y+1),Vector2(r.position.x+r.size.x-radius,r.position.y+1),Color(1,1,1,0.13),1.0)
  draw_string(FONT_BOLD,Vector2(r.position.x+8,r.position.y+r.size.y*0.62),t,HORIZONTAL_ALIGNMENT_CENTER,r.size.x-16,17,C.white)
 
 func _hit(r:Rect2,p:Vector2)->bool:
