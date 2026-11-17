@@ -63,8 +63,8 @@ func _ready() -> void:
  rng.randomize()
  if ResourceLoader.exists("res://assets/ending_photo.jpg"):
   ending_texture=load("res://assets/ending_photo.jpg")
- if ResourceLoader.exists("res://assets/boot_splash.png"):
-  splash_texture=load("res://assets/boot_splash.png")
+ if ResourceLoader.exists("res://assets/boot_splash.svg"):
+  splash_texture=load("res://assets/boot_splash.svg")
  _load_save()
  _setup_audio()
  get_viewport().size_changed.connect(_on_viewport_resized)
