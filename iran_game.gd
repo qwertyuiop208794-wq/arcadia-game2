@@ -505,7 +505,7 @@ func _save_profiles()->void:
  meta.save(PROFILE_INDEX_PATH)
 
 func _profile_path(index:int)->String:
- return PROFILE_DIR+"/player_%02d.cfg" % [index+1]
+ return "user://iran_save.cfg"
 
 func _current_profile_name()->String:
  if current_profile>=0 and current_profile<profile_names.size():
