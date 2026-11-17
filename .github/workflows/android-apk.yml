@@ -1,4 +1,4 @@
-name: Build Arcadia Android APK
+name: Build Iran Android APK
 
 on:
   workflow_dispatch:
@@ -6,6 +6,10 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/android-apk.yml"
+      - "iran_game.gd"
+      - "iran_icon.svg"
+      - "Arcadia_Android_Source_Ready.zip"
+      - "ending_photo.jpg.b64"
       - ".build-trigger"
 
 jobs:
@@ -28,6 +32,10 @@ jobs:
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
           cp "$GITHUB_WORKSPACE/iran_game.gd" "$PROJECT_DIR/scripts/game.gd"
           mkdir -p "$PROJECT_DIR/assets"
+          test -s "$GITHUB_WORKSPACE/iran_icon.svg"
+          cp "$GITHUB_WORKSPACE/iran_icon.svg" "$PROJECT_DIR/assets/iran_icon.svg"
+          sed -i 's@config/icon=.*@config/icon="res://assets/iran_icon.svg"@' "$PROJECT_DIR/project.godot"
+          sed -i 's@application/icon=.*@application/icon="res://assets/iran_icon.svg"@' "$PROJECT_DIR/export_presets.cfg"
           test -s "$GITHUB_WORKSPACE/ending_photo.jpg.b64"
           base64 --decode "$GITHUB_WORKSPACE/ending_photo.jpg.b64" > "$PROJECT_DIR/assets/ending_photo.jpg"
           test -s "$PROJECT_DIR/assets/ending_photo.jpg"
@@ -36,8 +44,16 @@ jobs:
           sed -i 's@config/name="آرکادیا"@config/name="ایران"@' "$PROJECT_DIR/project.godot"
           sed -i 's/package\/name="آرکادیا"/package\/name="ایران"/' "$PROJECT_DIR/export_presets.cfg"
           sed -i 's/package\/unique_name="com.arcadia.realm"/package\/unique_name="com.iran.game"/' "$PROJECT_DIR/export_presets.cfg"
-          sed -i 's/^version\/code=.*/version\/code=3/' "$PROJECT_DIR/export_presets.cfg"
-          sed -i 's/^version\/name=.*/version\/name="1.1.0"/' "$PROJECT_DIR/export_presets.cfg"
+          sed -i 's/^version\/code=.*/version\/code=4/' "$PROJECT_DIR/export_presets.cfg"
+          sed -i 's/^version\/name=.*/version\/name="1.2.0"/' "$PROJECT_DIR/export_presets.cfg"
+          sed -i 's@window/size/viewport_width=.*@window/size/viewport_width=720@' "$PROJECT_DIR/project.godot"
+          sed -i 's@window/size/viewport_height=.*@window/size/viewport_height=1280@' "$PROJECT_DIR/project.godot"
+          sed -i 's@window/size/window_width_override=.*@window/size/window_width_override=720@' "$PROJECT_DIR/project.godot"
+          sed -i 's@window/size/window_height_override=.*@window/size/window_height_override=1280@' "$PROJECT_DIR/project.godot"
+          sed -i 's@window/handheld/orientation=.*@window/handheld/orientation=1@' "$PROJECT_DIR/project.godot"
+          sed -i 's@node name="Arcadia"@node name="Iran"@' "$PROJECT_DIR/scenes/main.tscn"
+          echo "=== Portrait fullscreen project settings ==="
+          grep -nE 'viewport_(width|height)|orientation|config/icon' "$PROJECT_DIR/project.godot"
           echo "=== Enable Android ETC2/ASTC texture import ==="
           if grep -q 'textures/vram_compression/import_etc2_astc=' "$PROJECT_DIR/project.godot"; then
             sed -i 's@textures/vram_compression/import_etc2_astc=.*@textures/vram_compression/import_etc2_astc=true@' "$PROJECT_DIR/project.godot"
@@ -145,9 +161,9 @@ jobs:
             exit 1
           fi
           echo "=== Runtime startup smoke test ==="
-          godot --headless --path "$PROJECT_DIR" --quit-after 20 2>&1 | tee "$GITHUB_WORKSPACE/godot-runtime.log"
-          if grep -E "SCRIPT ERROR: Parse Error|ERROR: Failed to load script|Parse Error:" "$GITHUB_WORKSPACE/godot-runtime.log"; then
-            echo "Godot runtime reported a script parse error."
+          godot --headless --path "$PROJECT_DIR" --quit-after 60 2>&1 | tee "$GITHUB_WORKSPACE/godot-runtime.log"
+          if grep -E "SCRIPT ERROR:|ERROR: Failed to load script|Parse Error:" "$GITHUB_WORKSPACE/godot-runtime.log"; then
+            echo "Godot runtime reported a script or startup error."
             exit 1
           fi
           echo "=== Android export ==="
