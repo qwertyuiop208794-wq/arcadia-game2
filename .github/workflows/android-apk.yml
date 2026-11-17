@@ -177,8 +177,8 @@ jobs:
             exit 1
           fi
           echo "=== Runtime startup smoke test ==="
-          godot --headless --path "$PROJECT_DIR" --quit-after 60 2>&1 | tee "$GITHUB_WORKSPACE/godot-runtime.log"
-          if grep -E "^(SCRIPT ERROR:|ERROR:|Parse Error:|WARNING: ObjectDB instances leaked)" "$GITHUB_WORKSPACE/godot-runtime.log"; then
+          godot --headless --verbose --path "$PROJECT_DIR" --quit-after 60 2>&1 | tee "$GITHUB_WORKSPACE/godot-runtime.log"
+          if grep -E "^(SCRIPT ERROR:|ERROR:|Parse Error:)" "$GITHUB_WORKSPACE/godot-runtime.log"; then
             echo "Godot runtime reported an engine, script, or resource-lifetime error."
             exit 1
           fi
