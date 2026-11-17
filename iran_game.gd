@@ -236,7 +236,7 @@ func _draw_minigame_board(s: Vector2) -> void:
    _center("اولویت منابع بحران",c.y-90,15,C.muted)
    _center("نیاز فوری: "+priorities[urgent],c.y-62,14,C.gold)
    for i in range(3):
-    var x:=c.x-122+i*122
+    var x:=c.x-131+i*90
     draw_rect(Rect2(x,c.y-40,82,125),C.green if i==urgent else C.panel2)
     draw_rect(Rect2(x+14,c.y+30,54,25),[C.blue,C.red,C.gold][i])
     _center_at(priorities[i],Vector2(x+41,c.y-3),16,C.white)
@@ -246,8 +246,8 @@ func _draw_minigame_board(s: Vector2) -> void:
    _center("پرونده مدارک",c.y-90,15,C.muted)
    _center("مدرک موردنیاز: "+documents[required],c.y-62,14,C.gold)
    for i in range(4):
-    var x:=c.x-150+i*100
-    draw_rect(Rect2(x,c.y-48,88,132),C.green if i==required else C.panel2)
+    var x:=c.x-148+i*75
+    draw_rect(Rect2(x,c.y-48,66,132),C.green if i==required else C.panel2)
     draw_rect(Rect2(x+12,c.y-30,64,7),C.gold)
     for k in range(3): draw_line(Vector2(x+12,c.y-6+k*22),Vector2(x+70,c.y-6+k*22),C.muted,2)
     _center_at(documents[i],Vector2(x+44,c.y+65),12,C.white)
@@ -287,8 +287,8 @@ func _draw_minigame_board(s: Vector2) -> void:
    _center("اسناد محموله گمرکی",c.y-90,15,C.muted)
    _center("سند درخواستی: "+papers[required_paper],c.y-62,14,C.gold)
    for i in range(3):
-    var x:=c.x-145+i*145
-    draw_rect(Rect2(x,c.y-45,118,110),C.green if i==required_paper else C.panel2)
+    var x:=c.x-145+i*100
+    draw_rect(Rect2(x,c.y-45,90,110),C.green if i==required_paper else C.panel2)
     draw_rect(Rect2(x+16,c.y-26,86,55),C.bg)
     _center_at(papers[i],Vector2(x+59,c.y+48),13,C.white)
   9:
@@ -319,7 +319,7 @@ func _draw_minigame_board(s: Vector2) -> void:
    _center("جلسه هیئت‌مدیره؛ اولویت: "+proposal_labels[expected_proposal],c.y-95,13,C.muted)
    draw_rect(Rect2(c.x-145,c.y-40,290,120),C.panel2)
    for i in range(4):
-    var p:=Vector2(c.x-108+(i%2)*216,c.y-58+int(i/2)*155)
+    var p:=Vector2(c.x-75+(i%2)*150,c.y-35+int(i/2)*75)
     draw_circle(p,20,C.gold if i==puzzle_rotation%4 else C.blue)
     _center_at(["مالی","فروش","تولید","منابع"][i],p+Vector2(0,32),12,C.white)
   12:
@@ -335,18 +335,18 @@ func _draw_minigame_board(s: Vector2) -> void:
    _center("کالا باید در قفسهٔ "+shelves[target_shelf]+" قرار بگیرد",c.y-67,13,C.gold)
    var shelf_colors:Array=[C.blue,C.green,C.gold,C.red]
    for row in range(2):
-    draw_line(Vector2(c.x-160,c.y-12+row*82),Vector2(c.x+160,c.y-12+row*82),C.gold,4)
+    draw_line(Vector2(c.x-155,c.y-39.5+row*75),Vector2(c.x+155,c.y-39.5+row*75),C.gold,4)
     for col in range(4):
      var target:=col==target_shelf
-     draw_rect(Rect2(c.x-132+col*86,c.y-55+row*82,58,38),shelf_colors[col] if target else Color(shelf_colors[col],0.38))
+     draw_rect(Rect2(c.x-142.5+col*75,c.y-39.5+row*75,60,38),shelf_colors[col] if target else Color(shelf_colors[col],0.38))
   14:
    var shifts:Array=["صبح","عصر","شب"]
    var wanted_shift:=posmod(task_index+int(mini_state.get("turn",0)),3)
    _center("جدول برنامه شیفت",c.y-95,15,C.muted)
    _center("شیفت موردنیاز: "+shifts[wanted_shift],c.y-67,14,C.gold)
    for i in range(3):
-    var x:=c.x-150+i*105
-    draw_rect(Rect2(x,c.y-45,94,130),C.panel2)
+    var x:=c.x-145+i*100
+    draw_rect(Rect2(x,c.y-45,90,130),C.panel2)
     _center_at(shifts[i],Vector2(x+47,c.y-15),15,C.gold)
     for j in range(3):
      draw_rect(Rect2(x+12,c.y+10+j*30,70,22),C.green if j==wanted_shift else C.blue if j==puzzle_rotation%3 else C.bg)
@@ -372,8 +372,8 @@ func _draw_minigame_board(s: Vector2) -> void:
    _center("سبد خرید و بودجه",c.y-95,15,C.muted)
    _center("بودجه: %d  |  خرج‌شده: %d" % [int(mini_state.get("budget",120)),int(mini_state.get("spent",0))],c.y-67,13,C.gold)
    for i in range(4):
-    var x:=c.x-155+i*82
-    draw_rect(Rect2(x,c.y-55,68,124),C.panel2)
+    var x:=c.x-160+i*80
+    draw_rect(Rect2(x,c.y-55,72,124),C.panel2)
     draw_circle(Vector2(x+34,c.y-19),17,[C.red,C.green,C.gold,C.blue][i])
     _center_at(["نان","شیر","میوه","برنج"][i],Vector2(x+34,c.y+23),12,C.white)
     _center_at(str((i+1)*15)+"k",Vector2(x+34,c.y+48),11,C.gold)
@@ -401,8 +401,8 @@ func _draw_minigame_board(s: Vector2) -> void:
    _center("انتخاب بسته اینترنت",c.y-95,15,C.muted)
    _center("مصرف پیش‌بینی‌شده: "+["کم","متوسط","زیاد"][wanted_package]+"  |  بسته پیشنهادی: "+packages[wanted_package],c.y-67,12,C.gold)
    for i in range(3):
-    var x:=c.x-150+i*150
-    draw_rect(Rect2(x,c.y-38,122,135),C.green if i==wanted_package else C.panel2)
+    var x:=c.x-149+i*103
+    draw_rect(Rect2(x,c.y-38,92,135),C.green if i==wanted_package else C.panel2)
     _center_at(packages[i],Vector2(x+61,c.y-1),16,C.white)
     _center_at(["۲ گیگ","۱۰ گیگ","۳۰ گیگ"][i],Vector2(x+61,c.y+40),15,C.gold)
     _center_at("طرح "+str(i+1),Vector2(x+61,c.y+75),12,C.muted)
@@ -434,7 +434,7 @@ func _draw_minigame_board(s: Vector2) -> void:
    _center("(%d + %d) × ۲" % [left_value,right_value],c.y-28,23,C.gold)
    var answers:Array=[answer_value-6,answer_value-3,answer_value,answer_value+5]
    for i in range(4):
-    _button(Rect2(c.x-150+i*100,c.y+12,88,52),str(answers[i]),C.panel2)
+    _button(Rect2(c.x-157+i*80,c.y+12,74,52),str(answers[i]),C.panel2)
   24:
    _center("کارت‌های حافظه",c.y-95,15,C.muted)
    var memory_symbols:=["★","★","◆","◆","●","●"]
@@ -464,11 +464,11 @@ func _draw_minigame_board(s: Vector2) -> void:
    var requested_style:=posmod(task_index+round_no+int(mini_state.get("turn",0)),3)
    _center("درخواست مشتری: "+style_labels[requested_style],c.y-95,15,C.gold)
    for i in range(3):
-    var x:=c.x-145+i*145
-    draw_rect(Rect2(x,c.y-60,116,145),C.panel2)
-    draw_circle(Vector2(x+58,c.y-20),20,C.gold)
-    draw_rect(Rect2(x+38,c.y+5,40,65),[C.blue,C.green,C.red][i])
-    _center_at(style_labels[i],Vector2(x+58,c.y+84),13,C.white)
+    var x:=c.x-148+i*103
+    draw_rect(Rect2(x,c.y-60,90,145),C.panel2)
+    draw_circle(Vector2(x+45,c.y-20),20,C.gold)
+    draw_rect(Rect2(x+25,c.y+5,40,65),[C.blue,C.green,C.red][i])
+    _center_at(style_labels[i],Vector2(x+45,c.y+84),13,C.white)
   27:
    var required_direction:="راست" if posmod(task_index+int(mini_state.get("turn",0)),2)==0 else "چپ"
    _center("اجزای قرینه چهره",c.y-95,15,C.muted)
@@ -499,11 +499,11 @@ func _draw_minigame_board(s: Vector2) -> void:
    _center("جزئیات درخواستی: "+outfit_parts[required_part],c.y-67,14,C.gold)
    var colors:Array=[C.blue,C.gold,C.green,C.red]
    for i in range(4):
-    var x:=c.x-150+i*100
-    draw_rect(Rect2(x,c.y-45,86,120),C.green if i==required_part else C.panel2)
-    draw_circle(Vector2(x+43,c.y-15),15,Color("#b88d77"))
-    draw_rect(Rect2(x+23,c.y+5,40,48),colors[posmod(i+puzzle_rotation,4)])
-    _center_at(outfit_parts[i],Vector2(x+43,c.y+63),11,C.white)
+    var x:=c.x-155+i*80
+    draw_rect(Rect2(x,c.y-45,70,120),C.green if i==required_part else C.panel2)
+    draw_circle(Vector2(x+35,c.y-15),15,Color("#b88d77"))
+    draw_rect(Rect2(x+15,c.y+5,40,48),colors[posmod(i+puzzle_rotation,4)])
+    _center_at(outfit_parts[i],Vector2(x+35,c.y+63),11,C.white)
   _:
    _center("مأموریت اختصاصی",c.y,18,C.gold)
 
@@ -1126,7 +1126,7 @@ func _handle_minigame_action(p:Vector2,travel:float,s:Vector2)->void:
    if cell==expected: _game_success("مدرک پرونده تأیید شد")
    else: _game_miss("این مدرک در این مرحله لازم نیست")
   5:
-   cell=_cell_index(p,Rect2(center.x-125,center.y-115,250,220),3,3)
+   cell=_cell_index(p,Rect2(center.x-125,center.y-60,250,210),3,3)
    if cell>=0:
     var tiles:Array=mini_state.get("pipe_tiles",[])
     if tiles.size()==9:
