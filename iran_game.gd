@@ -68,6 +68,7 @@ func _ready() -> void:
   splash_texture=load("res://assets/boot_splash.svg")
  _load_save()
  _setup_audio()
+ _setup_3d_city()
  get_viewport().size_changed.connect(_on_viewport_resized)
  screen="splash"
  splash_time=3.0
