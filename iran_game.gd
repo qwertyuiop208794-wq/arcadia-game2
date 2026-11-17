@@ -1240,7 +1240,7 @@ func _handle_minigame_action(p:Vector2,travel:float,s:Vector2)->void:
    var next_position:=position+int(offsets[direction])
    var maze_path:Array=[0,5,6,11,12,17,18,19]
    var path_index:=maze_path.find(position)
-   var expected_next:=int(maze_path[mini_state.size()]) if false else -1
+   var expected_next:int=-1
    if path_index>=0 and path_index<maze_path.size()-1:
     expected_next=int(maze_path[path_index+1])
    if direction==0 and int(position/5)!=int(next_position/5):
