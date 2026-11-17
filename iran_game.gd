@@ -2,9 +2,7 @@ extends Node2D
 
 const FONT_REGULAR: Font = preload("res://assets/fonts/ArabicUI-Regular.ttf")
 const FONT_BOLD: Font = preload("res://assets/fonts/ArabicUI-Bold.ttf")
-const PROFILE_DIR := "user://profiles"
-const PROFILE_INDEX_PATH := "user://profiles/index.cfg"
-const MAX_PROFILES := 5
+const SAVE_PATH := "user://iran_save.cfg"
 const C := {"bg":Color("#101820"),"panel":Color("#1b2933"),"panel2":Color("#263844"),"gold":Color("#e8bd70"),"white":Color("#f5f1e8"),"muted":Color("#a8b4bd"),"green":Color("#79a889"),"red":Color("#ce786f"),"blue":Color("#709db7")}
 const STAGES := [
  {"title":"شرایط تولد","opts":["👑 لاکچری و پولدار","💵 مرفه","🙂 معمولی","😐 سخت","🔥 خیلی سخت","☠️ دارک جهنمی"],"pass":5,"games":[0,1,2,3,4]},
@@ -34,9 +32,6 @@ var drag_start := Vector2.ZERO
 var dragging := false
 var toast := ""
 var toast_timer := 0.0
-var current_profile := 0
-var profile_names: Array[String] = ["بازیکن ۱"]
-var profile_input: LineEdit
 var settings := {
  "music": true, "effects": true, "volume": 80,
  "music_volume": 45, "effects_volume": 75,
@@ -65,37 +60,38 @@ var event_origin := "game"
 
 func _ready() -> void:
  rng.randomize()
- DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(PROFILE_DIR))
- current_profile = 0
  if ResourceLoader.exists("res://assets/ending_photo.jpg"):
   ending_texture=load("res://assets/ending_photo.jpg")
  _load_save()
  _setup_audio()
  get_viewport().size_changed.connect(_on_viewport_resized)
- screen = "splash"
- splash_time = 2.8
+ screen="splash"
+ splash_time=3.0
  _apply_audio_settings()
  queue_redraw()
 
 func _process(delta: float) -> void:
- if screen == "splash":
-  splash_time -= delta * _animation_multiplier()
-  if splash_time <= 0.0: screen = "home"
- if toast_timer > 0.0: toast_timer -= delta * _animation_multiplier()
- if shake_timer>0.0: shake_timer=maxf(0.0,shake_timer-delta)
+ if screen=="splash":
+  splash_time-=delta*_animation_multiplier()
+  if splash_time<=0.0:
+   screen="intro"
+ if toast_timer>0.0:
+  toast_timer-=delta*_animation_multiplier()
+ if shake_timer>0.0:
+  shake_timer=maxf(0.0,shake_timer-delta)
  particle_clock+=delta
- if screen == "game" and active_game == 23:
-  audio_clock += delta
-  if audio_clock >= 1.0:
-   audio_clock = 0.0
-   mini_state["time_left"] = maxi(0,int(mini_state.get("time_left",30))-1)
-   if int(mini_state.get("time_left",0)) == 0:
-    mini_state["time_left"] = 30
+ if screen=="game" and active_game==23:
+  audio_clock+=delta
+  if audio_clock>=1.0:
+   audio_clock=0.0
+   mini_state["time_left"]=maxi(0,int(mini_state.get("time_left",30))-1)
+   if int(mini_state.get("time_left",0))==0:
+    mini_state["time_left"]=30
     _notify("زمان این نوبت تمام شد؛ سؤال تازه رسید")
  queue_redraw()
 
 func _draw() -> void:
- var s := get_viewport_rect().size
+ var s:=get_viewport_rect().size
  draw_rect(Rect2(Vector2.ZERO,s),_background_color())
  if bool(settings.get("visual_effects",true)):
   draw_circle(Vector2(s.x*0.08,s.y*0.18),s.x*0.12,Color(0.91,0.74,0.44,0.035))
@@ -105,64 +101,102 @@ func _draw() -> void:
   shake=Vector2(rng.randf_range(-4.0,4.0),rng.randf_range(-3.0,3.0))
  draw_set_transform(shake,0.0,Vector2.ONE)
  if bool(settings.get("particles",true)):
-  for i in range(16):
+  for i in range(18):
    var px:=fposmod(float(i*73)+particle_clock*19.0,s.x)
    var py:=fposmod(float(i*117)+particle_clock*11.0,s.y)
    draw_circle(Vector2(px,py),1.5+float(i%3),Color(0.91,0.74,0.44,0.12))
- if screen == "splash":
-  _center("ایران",s.y*0.40,52,C.gold)
-  _center("ساخته شده توسط",s.y*0.51,18,C.muted)
-  _center("خلیل",s.y*0.56,28,C.white)
-  _center("بازی آفلاین",s.y*0.82,14,C.muted)
-  draw_set_transform(Vector2.ZERO,0.0,Vector2.ONE)
-  return
- if screen == "home":
-  _header("ایران","یک انتخاب، یک ماجرای تازه")
-  _center("زندگی را از نو انتخاب کن",s.y*0.37,27,C.white)
-  _center("۸ مرحله پیش روست",s.y*0.44,17,C.muted)
-  _button(Rect2(s.x*0.12,s.y*0.55,s.x*0.76,64),"ادامه مأموریت" if active_game>=0 else "شروع بازی",C.gold)
-  _button(Rect2(s.x-76,32,52,46),"⚙",C.panel2)
-  _button(Rect2(22,32,124,46),"پروفایل",C.panel2)
-  _center("بازیکن: "+_current_profile_name(),s.y*0.90,13,C.muted)
- elif screen == "stages":
-  _header("مرحله‌ها","مرحله %d از ۸" % (stage+1))
-  _center(STAGES[stage]["title"],s.y*0.23,30,C.gold)
-  var opts: Array = STAGES[stage]["opts"]
-  var h := minf(66.0,(s.y*0.56)/opts.size())
+ if screen=="splash":
+  var c:=Vector2(s.x*0.5,s.y*0.34)
+  draw_circle(c,76,C.panel)
+  draw_arc(c,68,0,TAU,72,C.gold,3)
+  draw_rect(Rect2(c.x-42,c.y-24,84,16),Color("#23945b"))
+  draw_rect(Rect2(c.x-42,c.y-8,84,16),C.white)
+  draw_rect(Rect2(c.x-42,c.y+8,84,16),Color("#d64a4a"))
+  _center("ایران",s.y*0.55,50,C.gold)
+  _center("ساخته شده توسط",s.y*0.64,18,C.muted)
+  _center("خلیل",s.y*0.70,27,C.white)
+  _center("یک تجربهٔ آفلاین",s.y*0.86,14,C.muted)
+ elif screen=="intro":
+  _draw_intro(s)
+ elif screen=="home":
+  _header("ایران","یک زندگی، هزار انتخاب")
+  _draw_home_art(s)
+  _center("زندگی را از نو انتخاب کن",s.y*0.53,25,C.white)
+  _center("۸ انتخاب تا پایان مسیر",s.y*0.58,16,C.muted)
+  _button(Rect2(s.x*0.10,s.y*0.64,s.x*0.80,66),"ادامهٔ زندگی" if active_game>=0 else "شروع بازی",C.gold)
+  _center("هر انتخاب، بخشی از داستان توست",s.y*0.79,14,C.muted)
+ elif screen=="stages":
+  _header("مسیر زندگی","مرحله %d از ۸" % (stage+1))
+  var bar:=Rect2(s.x*0.09,s.y*0.145,s.x*0.82,8)
+  draw_rect(bar,C.panel2)
+  draw_rect(Rect2(bar.position,Vector2(bar.size.x*float(stage)/8.0,bar.size.y)),C.gold)
+  _center(STAGES[stage]["title"],s.y*0.235,29,C.gold)
+  var opts:Array=STAGES[stage]["opts"]
+  var h:=minf(66.0,(s.y*0.55)/opts.size())
+  var y0:=s.y*0.29
   for i in range(opts.size()):
-   var r := Rect2(s.x*0.07,s.y*0.29+i*(h+8),s.x*0.86,h)
-   _button(r,String(opts[i]),C.panel2 if i != int(STAGES[stage]["pass"]) else Color("#304638"))
+   var r:=Rect2(s.x*0.07,y0+i*(h+8),s.x*0.86,h)
+   var color:=Color("#304638") if i==int(STAGES[stage]["pass"]) else C.panel2
+   _button(r,String(opts[i]),color)
+  _center("یکی از شرایط زندگی را انتخاب کن",s.y*0.86,13,C.muted)
   _button(Rect2(20,s.y-76,116,48),"بازگشت",C.panel)
- elif screen == "game":
+ elif screen=="game":
   _draw_game(s)
- elif screen == "settings":
+ elif screen=="settings":
   _draw_settings(s)
- elif screen == "event":
+ elif screen=="event":
   _draw_event(s)
- elif screen == "ending":
+ elif screen=="ending":
   _header("پایان مسیر","این مسیر را تو ساختی")
-  _center("تو با انتخاب‌های خودت، مسیر تولدت در ایران را پشت سر گذاشتی.",s.y*0.24,18,C.gold)
+  _center("تبریک! با شرایطی که خودت انتخاب کردی، در ایران به دنیا آمدی.",s.y*0.22,17,C.gold)
   _draw_ending_art(s)
-  _center("حالا نوبت ساختن ادامهٔ داستان توست.",s.y*0.72,15,C.white)
-  _center("امیدوارم زندگی‌ات پر از شادی، آرامش و اتفاق‌های قشنگ باشد.",s.y*0.755,13,C.muted)
-  _button(Rect2(s.x*0.12,s.y*0.81,s.x*0.76,54),"بازگشت به آغاز",C.gold)
- if toast_timer > 0.0:
+  _center("حالا ادامهٔ داستان در دست توست.",s.y*0.72,16,C.white)
+  _center("امیدوارم روزهایت پر از شادی، آرامش و اتفاق‌های روشن باشد.",s.y*0.755,13,C.muted)
+  _button(Rect2(s.x*0.10,s.y*0.82,s.x*0.80,56),"بازگشت به آغاز",C.gold)
+ if toast_timer>0.0:
   _button(Rect2(s.x*0.08,s.y-132,s.x*0.84,46),toast,C.panel2)
  draw_set_transform(Vector2.ZERO,0.0,Vector2.ONE)
+
+func _draw_intro(s:Vector2)->void:
+ var card:=Rect2(s.x*0.07,s.y*0.20,s.x*0.86,s.y*0.57)
+ draw_rect(card,C.panel,true)
+ draw_rect(card.grow(1),Color(1,1,1,0.10),false,2)
+ draw_circle(Vector2(s.x*0.5,s.y*0.31),45,Color("#304638"))
+ draw_arc(Vector2(s.x*0.5,s.y*0.31),43,0,TAU,64,C.gold,2)
+ _center("الان توی ایران به دنیا اومدی!",s.y*0.43,23,C.gold)
+ _center("قراره محیطی رو انتخاب کنی",s.y*0.51,20,C.white)
+ _center("که توش عمرت رو",s.y*0.565,19,C.white)
+ _center("تلف کردن",s.y*0.615,18,C.muted)
+ draw_line(Vector2(s.x*0.43,s.y*0.606),Vector2(s.x*0.57,s.y*0.606),C.red,3)
+ _center("زندگی کردن",s.y*0.665,22,C.green)
+ _button(Rect2(s.x*0.10,s.y*0.82,s.x*0.80,58),"ورود به زندگی",C.gold)
+
+func _draw_home_art(s:Vector2)->void:
+ var c:=Vector2(s.x*0.5,s.y*0.355)
+ draw_circle(c,104,C.panel)
+ draw_arc(c,94,0,TAU,80,C.gold,3)
+ draw_circle(c,44,Color("#304638"))
+ draw_arc(c,42,0,TAU,64,C.white,2)
+ for i in range(8):
+  var angle:float=-PI/2.0+float(i)*TAU/8.0
+  var p:=c+Vector2(cos(angle),sin(angle))*132.0
+  draw_line(c+Vector2(cos(angle),sin(angle))*108.0,p,C.blue,2)
+  draw_circle(p,11,C.gold if i<stage else C.panel2)
+ _center("ایران",c.y+8,24,C.white)
 
 func _draw_game(s: Vector2) -> void:
  _header("بازی فرعی","مرحله %d  •  %s" % [stage+1,GAME_NAMES[active_game]])
  _center(GAME_HINTS[active_game],s.y*0.19,16,C.muted)
  _center("دور %d  |  مأموریت %d" % [round_no,task_index+1],s.y*0.25,15,C.gold)
- var ratio := clampf(float(progress)/float(target),0.0,1.0)
- var bar := Rect2(s.x*0.10,s.y*0.30,s.x*0.80,14)
+ var ratio:=clampf(float(progress)/float(maxi(1,target)),0.0,1.0)
+ var bar:=Rect2(s.x*0.10,s.y*0.30,s.x*0.80,14)
  draw_rect(bar,C.panel2)
  draw_rect(Rect2(bar.position,Vector2(bar.size.x*ratio,bar.size.y)),C.green)
  _center("%s / %s" % [_fmt(progress),_fmt(target)],s.y*0.36,17,C.white)
  _draw_minigame_board(s)
- _center("برای حرکت صفحه را لمس یا بکش",s.y*0.77,13,C.muted)
+ _center(_action_label(),s.y*0.77,14,C.gold)
  _button(Rect2(20,s.y-76,140,48),"بازگشت به انتخاب",C.panel)
- _center("بازیکن: "+_current_profile_name()+"  •  پیشرفت خودکار",s.y-18,12,C.muted)
+ _center("عملیات ثبت‌شده: %d" % total_actions,s.y-18,12,C.muted)
  if active_game==23:
   _center("زمان باقی‌مانده: %d ثانیه" % int(mini_state.get("time_left",30)),s.y*0.40,14,C.gold)
 
@@ -179,6 +213,7 @@ func _draw_minigame_board(s: Vector2) -> void:
    _center("صفحه رمز گاوصندوق",c.y+122,13,C.muted)
   1:
    _center("فهرست هزینه‌های امروز",c.y-90,15,C.muted)
+   _center("بودجه: %d  |  مصرف‌شده: %d" % [int(mini_state.get("budget",100)),int(mini_state.get("spent",0))],c.y-112,12,C.gold)
    for i in range(4):
     var r:=Rect2(c.x-135+(i%2)*140,c.y-65+int(i/2)*78,125,64)
     _button(r,["سفر لوکس","رستوران","پوشاک","تفریح"][i],C.panel2)
@@ -205,14 +240,22 @@ func _draw_minigame_board(s: Vector2) -> void:
     for k in range(3): draw_line(Vector2(x+12,c.y-18+k*22),Vector2(x+70,c.y-18+k*22),C.muted,2)
     _center_at(["هویت","درآمد","نشانی","درخواست"][i],Vector2(x+44,c.y+53),12,C.white)
   5:
-   _center("مسیر آب را وصل کن",c.y-90,15,C.muted)
+   _center("مسیر ورودی تا خروجی آب را کامل کن",c.y-90,14,C.muted)
+   var pipe_tiles:Array=mini_state.get("pipe_tiles",[])
+   var pipe_row:=int(mini_state.get("pipe_row",1))
    for y in range(3):
     for x in range(3):
+     var index:=y*3+x
      var p:=Vector2(c.x-92+x*92,c.y-35+y*70)
+     var orientation:=int(pipe_tiles[index]) if pipe_tiles.size()==9 else 0
      draw_rect(Rect2(p-Vector2(29,25),Vector2(58,50)),C.panel2)
-     if posmod(x+y+puzzle_rotation,2)==0: draw_line(p-Vector2(21,0),p+Vector2(21,0),C.blue,7)
-     else: draw_line(p-Vector2(0,21),p+Vector2(0,21),C.blue,7)
+     if orientation==0:
+      draw_line(p-Vector2(22,0),p+Vector2(22,0),C.blue,8)
+     else:
+      draw_line(p-Vector2(0,22),p+Vector2(0,22),C.blue,8)
      draw_circle(p,6,C.gold)
+   draw_circle(Vector2(c.x-126,c.y-35+pipe_row*70),10,C.green)
+   draw_circle(Vector2(c.x+126,c.y-35+pipe_row*70),10,C.gold)
   6:
    _center("مقصد مسافر: طبقهٔ %d" % (posmod(task_index+int(mini_state.get("turn",0))+2,6)+1),c.y-100,15,C.muted)
    for i in range(6): _button(Rect2(c.x-103+(i%2)*110,c.y-67+int(i/2)*55,90,46),"طبقه "+str(i+1),C.panel2)
@@ -250,7 +293,9 @@ func _draw_minigame_board(s: Vector2) -> void:
     draw_rect(Rect2(p-Vector2(25,28),Vector2(50,56)),C.panel2)
     _center_at(str(i+1),p,22,C.gold)
   11:
-   _center("جلسه هیئت‌مدیره",c.y-95,15,C.muted)
+   var proposal_labels:Array=["مالی","فروش","تولید","منابع"]
+   var expected_proposal:=posmod(task_index+int(mini_state.get("turn",0)),4)
+   _center("جلسه هیئت‌مدیره؛ اولویت: "+proposal_labels[expected_proposal],c.y-95,13,C.muted)
    draw_rect(Rect2(c.x-145,c.y-40,290,120),C.panel2)
    for i in range(4):
     var p:=Vector2(c.x-108+(i%2)*216,c.y-58+int(i/2)*155)
@@ -276,20 +321,23 @@ func _draw_minigame_board(s: Vector2) -> void:
     _center_at(["صبح","عصر","شب"][i],Vector2(x+47,c.y-25),15,C.gold)
     for j in range(3): draw_rect(Rect2(x+12,c.y+j*34,70,25),C.blue if j==puzzle_rotation%3 else C.bg)
   15:
-   _center("سبد دارایی و ریسک",c.y-95,15,C.muted)
+   var expected_asset:=posmod(task_index+int(mini_state.get("turn",0)),4)
+   _center("سبد دارایی؛ گزینهٔ کم‌ریسک/پربازده را انتخاب کن",c.y-95,13,C.muted)
    for i in range(4):
     var y:=c.y-55+i*34
     _center_at(["نقد","سهام","طلا","اوراق"][i],Vector2(c.x-120,y+9),13,C.white)
     draw_rect(Rect2(c.x-70,y,210,18),C.panel2)
-    draw_rect(Rect2(c.x-70,y,210*[0.65,0.85,0.48,0.95][i],18),C.green if i==puzzle_rotation%4 else C.blue)
+    draw_rect(Rect2(c.x-70,y,210*[0.65,0.85,0.48,0.95][i],18),C.green if i==expected_asset else C.blue)
+   _center("سبد پیشنهادی: "+["نقد","سهام","طلا","اوراق"][expected_asset],c.y+105,13,C.gold)
   16:
+   var gross:=1000+task_index*20
    _center("برگه کسورات حقوق",c.y-95,15,C.muted)
    draw_rect(Rect2(c.x-135,c.y-65,270,115),C.panel2)
-   _center("حقوق پایه + مزایا",c.y-38,14,C.white)
-   _center("مالیات − بیمه",c.y-8,14,C.muted)
+   _center("حقوق و مزایا: %d" % gross,c.y-38,14,C.white)
+   _center("مالیات و بیمه: ۲۰٪",c.y-8,14,C.muted)
    _center("خالص پرداختی = ؟",c.y+18,17,C.gold)
    for i in range(4):
-    _button(Rect2(c.x-155+i*80,c.y+65,70,42),str(700+i*100),C.panel2)
+    _button(Rect2(c.x-155+i*80,c.y+65,70,42),str(gross-300+i*100),C.panel2)
   17:
    _center("سبد خرید و بودجه",c.y-95,15,C.muted)
    for i in range(4):
@@ -335,10 +383,13 @@ func _draw_minigame_board(s: Vector2) -> void:
     _center_at(["●","◆","▲","?"][i],p,22,C.gold)
    _center("گزینهٔ بعدی را انتخاب کن",c.y+65,13,C.muted)
   23:
+   var answer_value:=(task_index+4+round_no+2)*2
    _center("محاسبه زمان‌دار",c.y-95,15,C.muted)
    draw_rect(Rect2(c.x-115,c.y-60,230,50),C.panel2)
    _center("(%d + %d) × ۲" % [task_index+4,round_no+2],c.y-28,23,C.gold)
-   for i in range(4): _button(Rect2(c.x-150+i*100,c.y+12,88,52),str((i+1)*8+task_index),C.panel2)
+   var answers:=[answer_value-6,answer_value-3,answer_value,answer_value+5]
+   for i in range(4):
+    _button(Rect2(c.x-150+i*100,c.y+12,88,52),str(answers[i]),C.panel2)
   24:
    _center("کارت‌های حافظه",c.y-95,15,C.muted)
    var memory_symbols:=["★","★","◆","◆","●","●"]
@@ -349,24 +400,30 @@ func _draw_minigame_board(s: Vector2) -> void:
     var face:String=str(memory_symbols[i]) if i in shown_cards or i==int(mini_state.get("memory_first",-1)) else "؟"
     _center_at(face,r.get_center(),24,C.gold)
   25:
-   _center("هزارتو؛ مسیر خروج را بکش",c.y-95,15,C.muted)
+   _center("هزارتو؛ راه خروج را با حرکت‌های پی‌درپی پیدا کن",c.y-95,13,C.muted)
+   var maze_path:Array=[0,5,6,11,12,17,18,19]
    for row in range(4):
     for col in range(5):
+     var pos:=row*5+col
      var x:=c.x-100+col*40
      var y:=c.y-55+row*40
-     var pos:=row*5+col
-     draw_rect(Rect2(x,y,36,36),C.panel2 if posmod(row*2+col+puzzle_rotation,4)!=0 else C.bg)
+     var open:=pos in maze_path
+     draw_rect(Rect2(x,y,36,36),C.panel2 if open else Color("#111a20"))
+     if pos==0: _center_at("ورود",Vector2(x+18,y+18),9,C.green)
+     elif pos==19: _center_at("خروج",Vector2(x+18,y+18),9,C.gold)
      if pos==int(mini_state.get("maze_pos",0)):
-      draw_circle(Vector2(x+18,y+18),11,C.gold)
-   _center("ورود  →  خروج",c.y+120,13,C.gold)
+      draw_circle(Vector2(x+18,y+18),10,C.white)
+   _center("با کشیدن انگشت حرکت کن",c.y+120,13,C.gold)
   26:
-   _center("مسابقه انتخاب استایل",c.y-95,15,C.muted)
+   var style_labels:Array=["کلاسیک","رسمی","مدرن"]
+   var requested_style:=posmod(task_index+round_no,3)
+   _center("درخواست مشتری: "+style_labels[requested_style],c.y-95,15,C.gold)
    for i in range(3):
     var x:=c.x-145+i*145
     draw_rect(Rect2(x,c.y-60,116,145),C.panel2)
     draw_circle(Vector2(x+58,c.y-20),20,C.gold)
     draw_rect(Rect2(x+38,c.y+5,40,65),[C.blue,C.green,C.red][i])
-    _center_at(["کلاسیک","رسمی","مدرن"][i],Vector2(x+58,c.y+84),13,C.white)
+    _center_at(style_labels[i],Vector2(x+58,c.y+84),13,C.white)
   27:
    _center("اجزای قرینه چهره",c.y-95,15,C.muted)
    draw_circle(c,70,Color("#b88d77"))
@@ -376,13 +433,17 @@ func _draw_minigame_board(s: Vector2) -> void:
     draw_circle(Vector2(x,c.y-18),9,C.white)
     draw_arc(Vector2(x,c.y+12),20,0,PI,24,C.bg,3)
   28:
-   _center("استودیوی عکاسی",c.y-95,15,C.muted)
+   _center("استودیوی عکاسی؛ نور را مطابق نمونه تنظیم کن",c.y-95,14,C.muted)
+   var light_level:=int(mini_state.get("light",1))
+   var light_target:=int(mini_state.get("light_target",1))
    draw_rect(Rect2(c.x-145,c.y-48,290,150),C.panel2,false,4)
    draw_rect(Rect2(c.x-90,c.y-18,180,100),C.bg,false,2)
-   draw_circle(c,27,C.gold)
+   draw_circle(c,27,Color(0.91,0.74,0.44,0.25+float(light_level)*0.15))
    draw_circle(c,12,C.blue)
    draw_circle(Vector2(c.x-115,c.y-20),11,C.white)
    draw_circle(Vector2(c.x+115,c.y-20),11,C.white)
+   _center("نور فعلی: %d   |   نور نمونه: %d" % [light_level,light_target],c.y+125,13,C.gold)
+   _center("چپ: کاهش نور     راست: افزایش نور",c.y+150,12,C.muted)
   29:
    _center("ترکیب نهایی لباس",c.y-95,15,C.muted)
    var colors:=[C.blue,C.gold,C.green,C.red]
@@ -429,27 +490,11 @@ func _action_label() -> String:
   29: return "تکمیل تغییر استایل"
   _: return "انجام حرکت بعدی"
 
-func _draw_profile_select(s:Vector2)->void:
- _header("انتخاب بازیکن","هر بازیکن ذخیره و تنظیمات جداگانه دارد")
- var h:=minf(62.0,s.y*0.075)
- var y:=s.y*0.22
- for i in range(profile_names.size()):
-  var r:=Rect2(s.x*0.09,y+i*(h+10),s.x*0.82,h)
-  _button(r,profile_names[i],C.panel2 if i!=current_profile else Color("#304638"))
- _button(Rect2(s.x*0.12,y+profile_names.size()*(h+12),s.x*0.76,54),"ساخت پروفایل جدید",C.gold)
- _center("تا ۵ پروفایل محلی روی همین گوشی",s.y*0.86,13,C.muted)
- _button(Rect2(20,s.y-76,116,48),"بازگشت",C.panel)
 
-func _draw_profile_create(s:Vector2)->void:
- _header("پروفایل تازه","نام دلخواه بازیکن را وارد کن")
- _center("این پروفایل پیشرفت و تنظیمات مستقل دارد",s.y*0.30,16,C.white)
- _center("نام بازیکن",s.y*0.40,15,C.gold)
- _button(Rect2(s.x*0.12,s.y*0.62,s.x*0.76,54),"ساخت و ورود",C.gold)
- _button(Rect2(20,s.y-76,116,48),"انصراف",C.panel)
 
 func _draw_settings(s:Vector2)->void:
- _header("تنظیمات بازی","همه تغییرات روی همین گوشی ذخیره می‌شوند")
- var labels:=[]
+ _header("تنظیمات بازی","تغییرات فقط روی همین گوشی ذخیره می‌شوند")
+ var labels:Array=[]
  labels.append("موسیقی: "+("روشن" if settings["music"] else "خاموش"))
  labels.append("افکت صوتی: "+("روشن" if settings["effects"] else "خاموش"))
  labels.append("صدای کلی: %d٪" % int(settings["volume"]))
@@ -463,97 +508,20 @@ func _draw_settings(s:Vector2)->void:
  labels.append("لرزش گوشی: "+("روشن" if settings["haptics"] else "خاموش"))
  labels.append("ذخیره خودکار: "+("روشن" if settings["auto_save"] else "خاموش"))
  labels.append("رنگ محیط: "+_theme_label())
- labels.append("تعویض بازیکن")
  labels.append("شروع دوباره از مرحله اول")
  labels.append("ذخیره تنظیمات و پیشرفت")
- var step:=minf(58.0,s.y*0.064)
- var row_h:=minf(47.0,s.y*0.054)
- var y0:=s.y*0.16
+ var row_h:=minf(48.0,s.y*0.037)
+ var step:=row_h+6.0
+ var y0:=s.y*0.145
  for i in range(labels.size()):
-  var col:=i%2
-  var row:=int(i/2)
-  var x:=s.x*(0.055 if col==0 else 0.515)
-  _button(Rect2(x,y0+row*step,s.x*0.43,row_h),labels[i],C.panel2 if i<13 else C.panel)
- var percent:=int(round(float(stage+int(screen=="ending"))*12.5))
- _center("پیشرفت: %d٪  |  عملیات انجام‌شده: %d" % [percent,total_actions],s.y*0.78,14,C.gold)
- _center("مرحله فعلی: %d از ۸" % (stage+1),s.y*0.83,13,C.muted)
+  var color:=C.panel2 if i<13 else (Color("#563b37") if i==13 else Color("#304638"))
+  _button(Rect2(s.x*0.08,y0+i*step,s.x*0.84,row_h),labels[i],color)
+ var percent:=int(round(float(stage+(1 if screen=="ending" else 0))*12.5))
+ _center("پیشرفت مسیر: %d٪  |  عملیات: %d" % [percent,total_actions],s.y*0.89,13,C.gold)
  _button(Rect2(20,s.y-76,116,48),"بازگشت",C.panel)
 
-func _load_profiles()->void:
- var meta:=ConfigFile.new()
- if meta.load(PROFILE_INDEX_PATH)==OK:
-  var loaded:Variant=meta.get_value("profiles","names",["بازیکن ۱"])
-  profile_names.clear()
-  if loaded is Array:
-   for item in loaded:
-    if profile_names.size()<MAX_PROFILES:
-     profile_names.append(str(item))
- if profile_names.is_empty():
-  profile_names.append("بازیکن ۱")
- current_profile=clampi(int(meta.get_value("profiles","active",0)),0,profile_names.size()-1)
- _save_profiles()
-
-func _save_profiles()->void:
- var meta:=ConfigFile.new()
- meta.set_value("profiles","names",profile_names)
- meta.set_value("profiles","active",current_profile)
- meta.save(PROFILE_INDEX_PATH)
-
-func _profile_path(index:int)->String:
- return "user://iran_save.cfg"
-
-func _current_profile_name()->String:
- if current_profile>=0 and current_profile<profile_names.size():
-  return profile_names[current_profile]
- return "بازیکن"
-
-func _build_profile_input()->void:
- profile_input=LineEdit.new()
- profile_input.placeholder_text="مثلاً آرش"
- profile_input.alignment=HORIZONTAL_ALIGNMENT_CENTER
- profile_input.max_length=24
- profile_input.add_theme_font_override("font",FONT_REGULAR)
- profile_input.add_theme_font_size_override("font_size",22)
- profile_input.add_theme_color_override("font_color",C.white)
- profile_input.add_theme_color_override("font_placeholder_color",C.muted)
- profile_input.visible=false
- add_child(profile_input)
- _on_viewport_resized()
-
 func _on_viewport_resized()->void:
- if is_instance_valid(profile_input):
-  var s:=get_viewport_rect().size
-  profile_input.position=Vector2(s.x*0.12,s.y*0.46)
-  profile_input.size=Vector2(s.x*0.76,64)
  queue_redraw()
-
-func _create_profile()->void:
- if profile_names.size()>=MAX_PROFILES:
-  _notify("حداکثر ۵ پروفایل می‌توان ساخت")
-  return
- var name:=profile_input.text.strip_edges()
- if name.is_empty():
-  name="بازیکن "+str(profile_names.size()+1)
- profile_names.append(name)
- current_profile=profile_names.size()-1
- _save_profiles()
- profile_input.text=""
- profile_input.visible=false
- _load_save()
- screen="home"
- _play_sfx("success")
-
-func _select_profile(index:int)->void:
- if index<0 or index>=profile_names.size():
-  return
- _save(true)
- current_profile=index
- _save_profiles()
- _load_save()
- screen="home"
- if is_instance_valid(profile_input):
-  profile_input.visible=false
- _play_sfx("tap")
 
 func _animation_multiplier()->float:
  return [0.65,1.0,1.4][clampi(int(settings.get("animation_speed",1)),0,2)]
@@ -665,25 +633,21 @@ func _setting_action(index:int)->void:
   11: settings["auto_save"]=not bool(settings["auto_save"])
   12: settings["theme"]=posmod(int(settings["theme"])+1,4)
   13:
-   _save(true)
-   screen="home"
-   _play_sfx("tap")
-   return
-  14:
    stage=0
    active_game=-1
    active_option=-1
    progress=0
    target=200
+   total_actions=0
    round_no=1
    task_index=0
    mini_state.clear()
    completed_choices.clear()
    _save(true)
-   _notify("پیشرفت این پروفایل از ابتدا آغاز شد")
-  15:
+   _notify("مسیر بازی از مرحلهٔ اول آغاز شد")
+  14:
    _save(true)
-   _notify("پیشرفت و تنظیمات ذخیره شد")
+   _notify("تنظیمات و پیشرفت ذخیره شدند")
  _apply_audio_settings()
  _play_sfx("tap")
  _save(true)
@@ -722,9 +686,11 @@ func _center_at(t:String,p:Vector2,size:int,color:Color) -> void:
 func _header(title:String,sub:String) -> void:
  var s:=get_viewport_rect().size
  draw_rect(Rect2(0,0,s.x,112),C.panel)
- draw_string(FONT_BOLD,Vector2(22,45),title,HORIZONTAL_ALIGNMENT_LEFT,-1,24,C.gold)
- draw_string(FONT_REGULAR,Vector2(22,78),sub,HORIZONTAL_ALIGNMENT_LEFT,-1,13,C.muted)
- _button(Rect2(s.x-72,28,52,48),"⚙",C.panel2)
+ draw_rect(Rect2(0,108,s.x,4),C.gold)
+ draw_string(FONT_BOLD,Vector2(20,45),title,HORIZONTAL_ALIGNMENT_RIGHT,s.x-110,24,C.gold)
+ draw_string(FONT_REGULAR,Vector2(20,78),sub,HORIZONTAL_ALIGNMENT_RIGHT,s.x-110,13,C.muted)
+ if screen!="settings" and screen!="ending":
+  _button(Rect2(s.x-72,28,52,48),"⚙",C.panel2)
 
 func _button(r:Rect2,t:String,color:Color) -> void:
  draw_rect(r,color,true)
@@ -758,61 +724,37 @@ func _tap(p:Vector2,travel:float)->void:
  _play_sfx("tap")
  var s:=get_viewport_rect().size
  if screen=="splash":
-  screen="home"
+  screen="intro"
+ elif screen=="intro":
+  if p.y>=s.y*0.74:
+   screen="home"
  elif screen=="home":
-  if p.x>s.x-100 and p.y<120:
+  if p.x>s.x-105 and p.y<120:
    screen="settings"
-  elif p.y>s.y*0.5 and p.y<s.y*0.75:
-   if active_game>=0:
-    screen="game"
-   else:
-    screen="stages"
- elif screen=="profile_select":
-  if p.y>s.y-100:
+  elif p.y>=s.y*0.59 and p.y<=s.y*0.77:
+   screen="game" if active_game>=0 else "stages"
+ elif screen=="settings":
+  if p.y>s.y-105 and p.x<180:
    screen="home"
   else:
-   var h:=minf(62.0,s.y*0.075)
-   var y:=s.y*0.22
-   var selected:=-1
-   for i in range(profile_names.size()):
-    var r:=Rect2(s.x*0.09,y+i*(h+10),s.x*0.82,h)
-    if r.has_point(p):
-     selected=i
-   if selected>=0:
-    _select_profile(selected)
-   elif p.y>=y+profile_names.size()*(h+12) and p.y<=y+profile_names.size()*(h+12)+60:
-    if profile_names.size()<MAX_PROFILES:
-     screen="home"
-     profile_input.visible=false
-     profile_input.text=""
-     profile_input.grab_focus()
-    else:
-     _notify("حداکثر ۵ پروفایل می‌توان ساخت")
- elif screen=="event":
-  _handle_event_action(p,travel,s)
-  elif screen=="settings":
-  if p.y>s.y-100 and p.x<170:
-   screen="home"
-  else:
-   var row_h:=minf(47.0,s.y*0.054)
-   var step:=minf(58.0,s.y*0.064)
-   var y0:=s.y*0.16
+   var row_h:=minf(48.0,s.y*0.037)
+   var step:=row_h+6.0
+   var y0:=s.y*0.145
    var row:=int(floor((p.y-y0)/step))
-   var col:=0 if p.x<s.x*0.5 else 1
-   var index:=row*2+col
-   if row>=0 and row<8 and p.y<=y0+row*step+row_h:
-    _setting_action(index)
+   if row>=0 and row<15 and p.y<=y0+row*step+row_h:
+    _setting_action(row)
  elif screen=="stages":
-  if p.y>s.y-100:
+  if p.y>s.y-100 and p.x<170:
    screen="home"
   elif p.x>s.x-100 and p.y<120:
    screen="settings"
   else:
    var opts:Array=STAGES[stage]["opts"]
-   var h:=minf(66.0,(s.y*0.56)/opts.size())
-   var idx:=int(floor((p.y-s.y*0.29)/(h+8)))
+   var h:=minf(66.0,(s.y*0.55)/opts.size())
+   var idx:=int(floor((p.y-s.y*0.29)/(h+8.0)))
    if idx>=0 and idx<opts.size():
     if idx==int(STAGES[stage]["pass"]):
+     completed_choices.append(idx)
      stage+=1
      if stage>=STAGES.size():
       screen="ending"
@@ -835,26 +777,34 @@ func _tap(p:Vector2,travel:float)->void:
      screen="game"
      _play_sfx("move")
      _save()
+ elif screen=="event":
+  _handle_event_action(p,travel,s)
  elif screen=="game":
   if p.y>s.y-105 and p.x<190:
    screen="stages"
    _save()
+   queue_redraw()
    return
   if p.x>s.x-100 and p.y<120:
    screen="settings"
-  elif p.y>s.y*0.38 and p.y<s.y*0.69:
+  elif p.y>s.y*0.38 and p.y<s.y*0.72:
    _handle_minigame_action(p,travel,s)
   _save()
  elif screen=="ending":
-  screen="home"
-  stage=0
-  active_game=-1
-  progress=0
-  target=200
-  round_no=1
-  task_index=0
-  _play_sfx("success")
-  _save(true)
+  if p.y>s.y*0.74:
+   screen="home"
+   stage=0
+   active_game=-1
+   active_option=-1
+   progress=0
+   target=200
+   total_actions=0
+   round_no=1
+   task_index=0
+   mini_state.clear()
+   completed_choices.clear()
+   _play_sfx("success")
+   _save(true)
  queue_redraw()
 
 func _start_minigame(game_id:int)->void:
@@ -863,15 +813,40 @@ func _start_minigame(game_id:int)->void:
  last_game_tap_msec=0
  puzzle_rotation=rng.randi_range(0,7)
  mini_state={
-  "turn":0,"step":0,"score":0,"budget":120,"spent":0,
+  "turn":0,"step":0,"score":0,"budget":100,"spent":0,
   "safe_step":0,"network_node":0,"download_mask":0,
   "maze_pos":0,"maze_moves":0,"time_left":30,
   "memory_first":-1,"memory_found":[],"vehicle_x":0,
-  "vehicle_y":0,"light":1,"balance":0
+  "vehicle_y":0,"light":rng.randi_range(0,3),"light_target":posmod(task_index+round_no,4),
+  "balance":0
  }
  if game_id==23:
   mini_state["time_left"]=30
+ if game_id==5:
+  _setup_pipe_board()
  audio_clock=0.0
+
+func _setup_pipe_board()->void:
+ var row:=posmod(task_index+round_no,3)
+ var tiles:Array=[]
+ for i in range(9):
+  var r:=int(i/3)
+  var col:=posmod(i,3)
+  if r==row:
+   tiles.append(1 if col!=1 else 0)
+  else:
+   tiles.append(posmod(i+puzzle_rotation,2))
+ mini_state["pipe_row"]=row
+ mini_state["pipe_tiles"]=tiles
+
+func _pipes_connected(row:int)->bool:
+ var tiles:Array=mini_state.get("pipe_tiles",[])
+ if tiles.size()!=9:
+  return false
+ for col in range(3):
+  if int(tiles[row*3+col])!=0:
+   return false
+ return true
 
 func _cell_index(p:Vector2,area:Rect2,cols:int,rows:int)->int:
  if not area.has_point(p):
@@ -1067,10 +1042,17 @@ func _handle_minigame_action(p:Vector2,travel:float,s:Vector2)->void:
     _game_miss("ترتیب قفل درست نبود؛ دوباره امتحان کن")
   1:
    cell=_cell_index(p,Rect2(center.x-135,center.y-65,265,142),2,2)
-   if cell<0: _game_miss("یکی از دسته‌های هزینه را انتخاب کن")
+   if cell<0:
+    _game_miss("یکی از دسته‌های هزینه را انتخاب کن")
    else:
-    mini_state["spent"]=int(mini_state.get("spent",0))+[34,26,18,12][cell]
-    _game_success("هزینه در دستهٔ مربوط ثبت شد")
+    var cost:int=[34,26,18,12][cell]
+    var spent_now:=int(mini_state.get("spent",0))
+    var budget_now:=int(mini_state.get("budget",100))
+    if spent_now+cost<=budget_now:
+     mini_state["spent"]=spent_now+cost
+     _game_success("هزینه ثبت شد؛ بودجهٔ باقی‌مانده: %d" % (budget_now-spent_now-cost))
+    else:
+     _game_miss("این خرید از بودجهٔ باقی‌مانده بیشتر است")
   2:
    cell=_cell_index(p,Rect2(center.x-150,center.y+60,300,68),3,1)
    if cell<0: _game_miss("یکی از عددهای تراز را انتخاب کن")
@@ -1091,10 +1073,18 @@ func _handle_minigame_action(p:Vector2,travel:float,s:Vector2)->void:
   5:
    cell=_cell_index(p,Rect2(center.x-125,center.y-115,250,220),3,3)
    if cell>=0:
-    mini_state["tile_"+str(cell)]=posmod(int(mini_state.get("tile_"+str(cell),0))+1,4)
-    puzzle_rotation=posmod(puzzle_rotation+1,4)
-    _game_success("اتصال لوله تغییر کرد؛ مسیر را کامل کن")
-   else: _game_miss("یکی از قطعات شبکهٔ لوله را انتخاب کن")
+    var tiles:Array=mini_state.get("pipe_tiles",[])
+    if tiles.size()==9:
+     tiles[cell]=1-posmod(int(tiles[cell]),2)
+     mini_state["pipe_tiles"]=tiles
+     var target_row:=int(mini_state.get("pipe_row",1))
+     if _pipes_connected(target_row):
+      _game_success("مسیر آب کامل و به خروجی وصل شد")
+     else:
+      _notify("اتصال هنوز کامل نیست؛ قطعه‌ها را بچرخان")
+      _play_sfx("tap")
+   else:
+    _game_miss("یکی از قطعات شبکهٔ لوله را انتخاب کن")
   6:
    cell=_cell_index(p,Rect2(center.x-105,center.y-67,200,165),2,3)
    var expected:=posmod(task_index+turn+2,6)
@@ -1130,10 +1120,12 @@ func _handle_minigame_action(p:Vector2,travel:float,s:Vector2)->void:
    else: _game_miss("ترتیب مونتاژ را رعایت کن")
   11:
    cell=_cell_index(p,Rect2(center.x-150,center.y-72,300,150),2,2)
-   if cell>=0:
-    mini_state["score"]=int(mini_state.get("score",0))+[2,3,1,2][cell]
-    _game_success("رأی ثبت شد؛ دستور جلسه ادامه دارد")
-   else: _game_miss("یکی از پیشنهادهای جلسه را انتخاب کن")
+   var expected_proposal:=posmod(task_index+turn,4)
+   if cell==expected_proposal:
+    mini_state["score"]=int(mini_state.get("score",0))+1
+    _game_success("پیشنهاد درست در جلسه تصویب شد")
+   else:
+    _game_miss("این پیشنهاد با اولویت جلسه هماهنگ نیست")
   12:
    cell=_cell_index(p,Rect2(center.x-160,center.y-60,320,160),1,4)
    var expected:=posmod(task_index+round_no,4)
@@ -1153,15 +1145,18 @@ func _handle_minigame_action(p:Vector2,travel:float,s:Vector2)->void:
    else: _game_miss("این جایگاه با برنامهٔ شیفت سازگار نیست")
   15:
    cell=_cell_index(p,Rect2(center.x-150,center.y-68,300,145),1,4)
-   if cell>=0:
+   var expected_asset:=posmod(task_index+turn,4)
+   if cell==expected_asset:
     mini_state["balance"]=int(mini_state.get("balance",0))+[10,20,15,5][cell]
-    _game_success("سهم دارایی تنظیم شد")
-   else: _game_miss("یکی از سبدهای دارایی را انتخاب کن")
+    _game_success("دارایی در سبد مناسب قرار گرفت")
+   else:
+    _game_miss("ترکیب ریسک این سبد با سفارش سازگار نیست")
   16:
    cell=_cell_index(p,Rect2(center.x-150,center.y-20,300,150),4,1)
-   var expected:=posmod(int((1000+task_index*20)*0.8/100.0),4)
-   if cell==expected: _game_success("محاسبهٔ کسورات ثبت شد")
-   else: _game_miss("عدد خالص با محاسبهٔ کسورات برابر نیست")
+   if cell==1:
+    _game_success("خالص پرداختی با کسر ۲۰٪ درست محاسبه شد")
+   else:
+    _game_miss("مالیات و بیمه را از حقوق ناخالص کم کن")
   17:
    cell=_cell_index(p,Rect2(center.x-160,center.y-60,320,140),4,1)
    var prices:=[15,25,35,45]
@@ -1208,11 +1203,11 @@ func _handle_minigame_action(p:Vector2,travel:float,s:Vector2)->void:
    else: _game_miss("ادامهٔ الگو درست نیست")
   23:
    cell=_cell_index(p,Rect2(center.x-160,center.y+5,320,75),4,1)
-   var answer:=posmod((task_index+4+round_no+2)*2,4)
-   if cell==answer:
+   if cell==2:
     mini_state["time_left"]=30
     _game_success("محاسبه درست بود؛ سؤال بعدی آماده شد")
-   else: _game_miss("پاسخ محاسبه اشتباه است")
+   else:
+    _game_miss("پاسخ محاسبه اشتباه است")
   24:
    cell=_cell_index(p,Rect2(center.x-135,center.y-62,270,140),3,2)
    if cell<0: _game_miss("یکی از کارت‌ها را لمس کن")
@@ -1236,21 +1231,41 @@ func _handle_minigame_action(p:Vector2,travel:float,s:Vector2)->void:
     return
    var movement:=p-drag_start
    var direction:=0
-   if absf(movement.x)>absf(movement.y): direction=0 if movement.x>0 else 1
-   else: direction=2 if movement.y>0 else 3
+   if absf(movement.x)>absf(movement.y):
+    direction=0 if movement.x>0 else 1
+   else:
+    direction=2 if movement.y>0 else 3
+   var offsets:Array=[1,-1,5,-5]
    var position:=int(mini_state.get("maze_pos",0))
-   var next_position:int=position+int([1,-1,5,-5][direction])
-   if next_position>=0 and next_position<20 and posmod(next_position+task_index,7)!=0:
+   var next_position:=position+int(offsets[direction])
+   var maze_path:Array=[0,5,6,11,12,17,18,19]
+   var path_index:=maze_path.find(position)
+   var expected_next:=int(maze_path[mini_state.size()]) if false else -1
+   if path_index>=0 and path_index<maze_path.size()-1:
+    expected_next=int(maze_path[path_index+1])
+   if direction==0 and int(position/5)!=int(next_position/5):
+    expected_next=-1
+   if direction==1 and int(position/5)!=int(next_position/5):
+    expected_next=-1
+   if next_position==expected_next:
     mini_state["maze_pos"]=next_position
     mini_state["maze_moves"]=int(mini_state.get("maze_moves",0))+1
-    _game_success("یک خانه در هزارتو جلو رفتی")
-   else: _game_miss("این مسیر بسته است")
+    if next_position==19:
+     mini_state["maze_pos"]=0
+     _game_success("از هزارتو خارج شدی؛ مسیر تازه ساخته شد")
+    else:
+     _notify("مسیر درست است؛ ادامه بده")
+     _play_sfx("move")
+   else:
+    _game_miss("این راه به بن‌بست می‌رسد؛ مسیر را دوباره پیدا کن")
   26:
    cell=_cell_index(p,Rect2(center.x-155,center.y-62,310,150),3,1)
-   if cell>=0:
-    mini_state["score"]=int(mini_state.get("score",0))+[1,2,3][cell]
-    _game_success("استایل برای بخش بعد ثبت شد")
-   else: _game_miss("یکی از مدل‌ها را انتخاب کن")
+   var expected_style:=posmod(task_index+round_no,3)
+   if cell==expected_style:
+    mini_state["score"]=int(mini_state.get("score",0))+1
+    _game_success("استایل مطابق درخواست مشتری انتخاب شد")
+   else:
+    _game_miss("مدل انتخاب‌شده با درخواست مشتری مطابقت ندارد")
   27:
    if travel<28.0:
     _game_miss("برای تنظیم تقارن، انگشت را افقی بکش")
@@ -1262,10 +1277,21 @@ func _handle_minigame_action(p:Vector2,travel:float,s:Vector2)->void:
    else: _game_miss("حرکت را در جهت درست انجام بده")
   28:
    var adjustment:=0
-   if p.x<center.x-45: adjustment=-1
-   elif p.x>center.x+45: adjustment=1
-   mini_state["light"]=clampi(int(mini_state.get("light",1))+adjustment,0,3)
-   _game_success("نور و کادر دوربین تنظیم شد")
+   if p.x<center.x-45:
+    adjustment=-1
+   elif p.x>center.x+45:
+    adjustment=1
+   if adjustment==0:
+    _notify("برای تغییر نور، سمت چپ یا راست کادر را لمس کن")
+   else:
+    mini_state["light"]=clampi(int(mini_state.get("light",1))+adjustment,0,3)
+    var current_light:=int(mini_state.get("light",1))
+    var target_light:=int(mini_state.get("light_target",1))
+    if current_light==target_light:
+     _game_success("نورپردازی با نمونه یکسان شد")
+    else:
+     _notify("نور فعلی %d است؛ نمونه %d می‌خواهد" % [current_light,target_light])
+     _play_sfx("tap")
   29:
    cell=_cell_index(p,Rect2(center.x-160,center.y-60,320,140),4,1)
    var expected:=posmod(task_index+turn,4)
@@ -1277,7 +1303,6 @@ func _handle_minigame_action(p:Vector2,travel:float,s:Vector2)->void:
 func _advance_game()->void:
  total_actions+=1
  progress+=1
- var extra:=int(progress/maxi(1,target))
  if progress>=target:
   progress=0
   round_no+=1
@@ -1285,6 +1310,15 @@ func _advance_game()->void:
   var difficulty_growth:float=[0.6,1.0,1.6][clampi(int(settings.get("difficulty",1)),0,2)]
   target+=maxi(50,int(float(target)*difficulty_growth))
   puzzle_rotation=rng.randi_range(0,7)
+  if active_game==1 or active_game==17:
+   mini_state["spent"]=0
+  if active_game==5:
+   _setup_pipe_board()
+  elif active_game==25:
+   mini_state["maze_pos"]=0
+  elif active_game==28:
+   mini_state["light"]=rng.randi_range(0,3)
+   mini_state["light_target"]=posmod(task_index+round_no,4)
   _notify("مأموریت تازه: "+GAME_HINTS[active_game])
  elif total_actions%25==0:
   target+=int(target*0.15)
@@ -1316,7 +1350,7 @@ func _save(force:bool=false)->void:
  config.set_value("progress","completed_choices",completed_choices)
  config.set_value("progress","mini_state",mini_state)
  config.set_value("settings","all",settings)
- config.save(_profile_path(current_profile))
+ config.save(SAVE_PATH)
 
 func _load_save()->void:
  config=ConfigFile.new()
@@ -1338,7 +1372,7 @@ func _load_save()->void:
   "visual_effects":true,"theme":0,"auto_save":true,
   "screen_shake":true,"particles":true,"haptics":true
  }
- if config.load(_profile_path(current_profile))!=OK:
+ if config.load(SAVE_PATH)!=OK:
   _apply_audio_settings()
   return
  stage=clampi(int(config.get_value("progress","stage",0)),0,7)
