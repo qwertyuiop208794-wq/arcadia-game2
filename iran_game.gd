@@ -66,8 +66,7 @@ var event_origin := "game"
 func _ready() -> void:
  rng.randomize()
  DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(PROFILE_DIR))
- _load_profiles()
- _build_profile_input()
+ current_profile = 0
  if ResourceLoader.exists("res://assets/ending_photo.jpg"):
   ending_texture=load("res://assets/ending_photo.jpg")
  _load_save()
@@ -81,7 +80,7 @@ func _ready() -> void:
 func _process(delta: float) -> void:
  if screen == "splash":
   splash_time -= delta * _animation_multiplier()
-  if splash_time <= 0.0: screen = "profile_select"
+  if splash_time <= 0.0: screen = "home"
  if toast_timer > 0.0: toast_timer -= delta * _animation_multiplier()
  if shake_timer>0.0: shake_timer=maxf(0.0,shake_timer-delta)
  particle_clock+=delta
@@ -138,10 +137,6 @@ func _draw() -> void:
   _draw_game(s)
  elif screen == "settings":
   _draw_settings(s)
- elif screen == "profile_select":
-  _draw_profile_select(s)
- elif screen == "profile_create":
-  _draw_profile_create(s)
  elif screen == "event":
   _draw_event(s)
  elif screen == "ending":
@@ -765,9 +760,7 @@ func _tap(p:Vector2,travel:float)->void:
  if screen=="splash":
   screen="home"
  elif screen=="home":
-  if p.x<155 and p.y<100:
-   screen="profile_select"
-  elif p.x>s.x-100 and p.y<120:
+  if p.x>s.x-100 and p.y<120:
    screen="settings"
   elif p.y>s.y*0.5 and p.y<s.y*0.75:
    if active_game>=0:
@@ -797,13 +790,7 @@ func _tap(p:Vector2,travel:float)->void:
      _notify("حداکثر ۵ پروفایل می‌توان ساخت")
  elif screen=="event":
   _handle_event_action(p,travel,s)
- elif screen=="profile_create":
-  if p.y>s.y-100:
-   screen="profile_select"
-   profile_input.visible=false
-  elif p.y>s.y*0.58 and p.y<s.y*0.72:
-   _create_profile()
- elif screen=="settings":
+  elif screen=="settings":
   if p.y>s.y-100 and p.x<170:
    screen="home"
   else:
