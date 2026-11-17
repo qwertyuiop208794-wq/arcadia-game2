@@ -52,6 +52,7 @@ var mini_state: Dictionary = {}
 var tap_intervals: Array[float] = []
 var last_game_tap_msec := 0
 var ending_texture: Texture2D
+var splash_texture: Texture2D
 var event_kind := ""
 var event_code := 0
 var event_entry := ""
@@ -62,6 +63,8 @@ func _ready() -> void:
  rng.randomize()
  if ResourceLoader.exists("res://assets/ending_photo.jpg"):
   ending_texture=load("res://assets/ending_photo.jpg")
+ if ResourceLoader.exists("res://assets/boot_splash.png"):
+  splash_texture=load("res://assets/boot_splash.png")
  _load_save()
  _setup_audio()
  get_viewport().size_changed.connect(_on_viewport_resized)
@@ -106,16 +109,11 @@ func _draw() -> void:
    var py:=fposmod(float(i*117)+particle_clock*11.0,s.y)
    draw_circle(Vector2(px,py),1.5+float(i%3),Color(0.91,0.74,0.44,0.12))
  if screen=="splash":
-  var c:=Vector2(s.x*0.5,s.y*0.34)
-  draw_circle(c,76,C.panel)
-  draw_arc(c,68,0,TAU,72,C.gold,3)
-  draw_rect(Rect2(c.x-42,c.y-24,84,16),Color("#23945b"))
-  draw_rect(Rect2(c.x-42,c.y-8,84,16),C.white)
-  draw_rect(Rect2(c.x-42,c.y+8,84,16),Color("#d64a4a"))
-  _center("ایران",s.y*0.55,50,C.gold)
-  _center("ساخته شده توسط",s.y*0.64,18,C.muted)
-  _center("خلیل",s.y*0.70,27,C.white)
-  _center("یک تجربهٔ آفلاین",s.y*0.86,14,C.muted)
+  if splash_texture!=null:
+   draw_texture_rect(splash_texture,Rect2(Vector2.ZERO,s),false)
+  else:
+   _center("ساخته شده توسط",s.y*0.55,42,C.gold)
+   _center("خلیل",s.y*0.65,58,C.white)
  elif screen=="intro":
   _draw_intro(s)
  elif screen=="home":
