@@ -798,6 +798,9 @@ func _exit_tree()->void:
   sfx_player.stream=null
 
 func _setup_audio()->void:
+ if DisplayServer.get_name()=="headless":
+  sound_ready=false
+  return
  music_player=AudioStreamPlayer.new()
  music_player.name="BackgroundMusic"
  add_child(music_player)
