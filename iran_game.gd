@@ -53,6 +53,7 @@ var tap_intervals: Array[float] = []
 var last_game_tap_msec := 0
 var ending_texture: Texture2D
 var splash_texture: Texture2D
+var city_viewport: SubViewport
 var event_kind := ""
 var event_code := 0
 var event_entry := ""
@@ -96,6 +97,13 @@ func _process(delta: float) -> void:
 func _draw() -> void:
  var s:=get_viewport_rect().size
  draw_rect(Rect2(Vector2.ZERO,s),_background_color())
+ if city_viewport!=null and screen!="splash":
+  draw_texture_rect(city_viewport.get_texture(),Rect2(Vector2.ZERO,s),false)
+  var shade:=0.34
+  if screen=="stages": shade=0.52
+  elif screen=="game" or screen=="event" or screen=="settings": shade=0.70
+  elif screen=="ending": shade=0.43
+  draw_rect(Rect2(Vector2.ZERO,s),Color(0.025,0.045,0.075,shade))
  if bool(settings.get("visual_effects",true)):
   draw_circle(Vector2(s.x*0.08,s.y*0.18),s.x*0.12,Color(0.91,0.74,0.44,0.035))
   draw_circle(Vector2(s.x*0.94,s.y*0.78),s.x*0.18,Color(0.44,0.66,0.78,0.035))
@@ -119,24 +127,23 @@ func _draw() -> void:
  elif screen=="home":
   _header("ایران","یک زندگی، هزار انتخاب")
   _draw_home_art(s)
-  _center("زندگی را از نو انتخاب کن",s.y*0.53,25,C.white)
-  _center("۸ انتخاب تا پایان مسیر",s.y*0.58,16,C.muted)
-  _button(Rect2(s.x*0.10,s.y*0.64,s.x*0.80,66),"ادامهٔ زندگی" if active_game>=0 else "شروع بازی",C.gold)
-  _center("هر انتخاب، بخشی از داستان توست",s.y*0.79,14,C.muted)
+  _center("۸ انتخاب برای ساختن مسیر زندگی",s.y*0.585,18,C.white)
+  _button(Rect2(s.x*0.10,s.y*0.66,s.x*0.80,68),"ادامهٔ زندگی" if active_game>=0 else "شروع بازی",C.green)
+  _center("کاملاً آفلاین  •  ذخیره روی همین گوشی",s.y*0.79,13,C.muted)
  elif screen=="stages":
-  _header("مسیر زندگی","مرحله %d از ۸" % (stage+1))
-  var bar:=Rect2(s.x*0.09,s.y*0.145,s.x*0.82,8)
-  draw_rect(bar,C.panel2)
-  draw_rect(Rect2(bar.position,Vector2(bar.size.x*float(stage)/8.0,bar.size.y)),C.gold)
-  _center(STAGES[stage]["title"],s.y*0.235,29,C.gold)
+  _header("انتخاب‌های زندگی","انتخاب %d از ۸" % (stage+1))
+  var bar:=Rect2(s.x*0.09,s.y*0.145,s.x*0.82,9)
+  _draw_rounded_rect(bar,C.panel2,5.0)
+  _draw_rounded_rect(Rect2(bar.position,Vector2(bar.size.x*float(stage)/8.0,bar.size.y)),C.gold,5.0)
+  _center(STAGES[stage]["title"],s.y*0.235,30,C.gold)
   var opts:Array=STAGES[stage]["opts"]
   var h:=minf(66.0,(s.y*0.55)/opts.size())
   var y0:=s.y*0.29
   for i in range(opts.size()):
-   var r:=Rect2(s.x*0.07,y0+i*(h+8),s.x*0.86,h)
-   var color:=Color("#304638") if i==int(STAGES[stage]["pass"]) else C.panel2
+   var r:=Rect2(s.x*0.07,y0+i*(h+9),s.x*0.86,h)
+   var color:=Color("#314a3e") if i==int(STAGES[stage]["pass"]) else Color("#243744")
    _button(r,String(opts[i]),color)
-  _center("یکی از شرایط زندگی را انتخاب کن",s.y*0.86,13,C.muted)
+  _center("یکی از گزینه‌ها را انتخاب کن",s.y*0.86,13,C.muted)
   _button(Rect2(20,s.y-76,116,48),"بازگشت",C.panel)
  elif screen=="game":
   _draw_game(s)
@@ -146,14 +153,206 @@ func _draw() -> void:
   _draw_event(s)
  elif screen=="ending":
   _header("پایان مسیر","این مسیر را تو ساختی")
-  _center("تبریک! با شرایطی که خودت انتخاب کردی، در ایران به دنیا آمدی.",s.y*0.22,17,C.gold)
+  _center("موفق شدی با شرایطی که خودت انتخاب کردی، در ایران به دنیا بیای.",s.y*0.22,17,C.gold)
   _draw_ending_art(s)
-  _center("حالا ادامهٔ داستان در دست توست.",s.y*0.72,16,C.white)
-  _center("امیدوارم روزهایت پر از شادی، آرامش و اتفاق‌های روشن باشد.",s.y*0.755,13,C.muted)
-  _button(Rect2(s.x*0.10,s.y*0.82,s.x*0.80,56),"بازگشت به آغاز",C.gold)
+  _center("امیدوارم زندگی‌ات سرشار از شادی، آرامش و اتفاق‌های خوب باشد.",s.y*0.755,14,C.white)
+  _button(Rect2(s.x*0.10,s.y*0.82,s.x*0.80,56),"بازگشت به آغاز",C.green)
  if toast_timer>0.0:
   _button(Rect2(s.x*0.08,s.y-132,s.x*0.84,46),toast,C.panel2)
  draw_set_transform(Vector2.ZERO,0.0,Vector2.ONE)
+
+func _setup_3d_city()->void:
+ city_viewport=SubViewport.new()
+ city_viewport.name="IranCity3D"
+ city_viewport.size=Vector2i(540,960)
+ city_viewport.render_target_update_mode=SubViewport.UPDATE_ALWAYS
+ city_viewport.msaa_3d=Viewport.MSAA_2X
+ add_child(city_viewport)
+ var world_env:=WorldEnvironment.new()
+ var environment:=Environment.new()
+ environment.background_mode=Environment.BG_COLOR
+ environment.background_color=Color("#d78b80")
+ environment.ambient_light_source=Environment.AMBIENT_SOURCE_COLOR
+ environment.ambient_light_color=Color("#f1c5a0")
+ environment.ambient_light_energy=0.82
+ environment.tonemap_mode=Environment.TONE_MAPPER_FILMIC
+ world_env.environment=environment
+ city_viewport.add_child(world_env)
+ var camera:=Camera3D.new()
+ camera.projection=Camera3D.PROJECTION_ORTHOGONAL
+ camera.size=22.0
+ camera.position=Vector3(0.0,8.0,23.0)
+ camera.look_at(Vector3(0.0,3.3,-5.0),Vector3.UP)
+ camera.current=true
+ city_viewport.add_child(camera)
+ var sun:=DirectionalLight3D.new()
+ sun.rotation_degrees=Vector3(-48.0,-28.0,0.0)
+ sun.light_color=Color("#ffd0a0")
+ sun.light_energy=1.25
+ sun.shadow_enabled=true
+ city_viewport.add_child(sun)
+ var fill:=OmniLight3D.new()
+ fill.position=Vector3(0.0,8.0,8.0)
+ fill.light_color=Color("#8ab5d1")
+ fill.light_energy=0.42
+ fill.omni_range=34.0
+ city_viewport.add_child(fill)
+ var city:=Node3D.new()
+ city.name="TehranScene"
+ city_viewport.add_child(city)
+ var ground:=PlaneMesh.new()
+ ground.size=Vector2(70.0,70.0)
+ _city_add_mesh(city,ground,Vector3(0.0,-0.12,-4.0),Color("#59616a"))
+ var road:=PlaneMesh.new()
+ road.size=Vector2(9.5,34.0)
+ _city_add_mesh(city,road,Vector3(0.0,-0.04,4.0),Color("#303942"))
+ for stripe in range(9):
+  _city_box(city,Vector3(0.16,0.018,1.25),Vector3(0.0,0.0,11.0-float(stripe)*2.9),Color("#e6d3ad"))
+ var mountain_colors:Array=[Color("#677c91"),Color("#566d86"),Color("#7b8792")]
+ for i in range(3):
+  var peak:=CylinderMesh.new()
+  peak.top_radius=0.0
+  peak.bottom_radius=5.8
+  peak.height=10.0+float(i%2)*2.0
+  peak.radial_segments=6
+  _city_add_mesh(city,peak,Vector3(-6.0+float(i)*6.0,4.2,-24.0-float(i%2)*1.5),mountain_colors[i])
+ var skyline_colors:Array=[Color("#586b7a"),Color("#687b83"),Color("#7b6b69"),Color("#4e6475"),Color("#88766c")]
+ for side in [-1,1]:
+  for i in range(4):
+   var width:=1.35+float((i+1)%2)*0.5
+   var depth:=1.55
+   var height:=4.2+float((i*3+side+5)%4)*1.15
+   var x:=float(side)*(4.4+float(i%2)*0.7)
+   var z:=-4.0-float(i)*4.2
+   _city_box(city,Vector3(width,height,depth),Vector3(x,height*0.5-0.02,z),skyline_colors[posmod(i+side+5,skyline_colors.size())])
+   for row in range(3):
+    for col in range(2):
+     var wx:=x+(float(col)-0.5)*width*0.48
+     var wy:=0.85+float(row)*0.92
+     if wy<height-0.25:
+      _city_box(city,Vector3(0.22,0.28,0.035),Vector3(wx,wy,z+depth*0.5+0.025),Color("#f5c982"))
+ var azadi_left:=_city_box(city,Vector3(0.78,5.0,0.75),Vector3(-1.05,2.45,-9.5),Color("#e0d2b5"))
+ azadi_left.rotation.z=-0.20
+ var azadi_right:=_city_box(city,Vector3(0.78,5.0,0.75),Vector3(1.05,2.45,-9.5),Color("#e0d2b5"))
+ azadi_right.rotation.z=0.20
+ _city_box(city,Vector3(2.75,0.62,0.85),Vector3(0.0,4.65,-9.5),Color("#eadfc6"))
+ _city_box(city,Vector3(1.55,0.24,0.95),Vector3(0.0,5.08,-9.5),Color("#b9b4a4"))
+ var milad:=CylinderMesh.new()
+ milad.top_radius=0.18
+ milad.bottom_radius=0.43
+ milad.height=7.8
+ milad.radial_segments=12
+ _city_add_mesh(city,milad,Vector3(3.1,3.9,-15.0),Color("#d9d6cf"))
+ var deck:=CylinderMesh.new()
+ deck.top_radius=0.62
+ deck.bottom_radius=0.62
+ deck.height=0.62
+ deck.radial_segments=16
+ _city_add_mesh(city,deck,Vector3(3.1,6.4,-15.0),Color("#e6cba1"))
+ var antenna:=CylinderMesh.new()
+ antenna.top_radius=0.035
+ antenna.bottom_radius=0.12
+ antenna.height=2.4
+ antenna.radial_segments=8
+ _city_add_mesh(city,antenna,Vector3(3.1,8.85,-15.0),Color("#e4e5e0"))
+ var sun_mesh:=SphereMesh.new()
+ sun_mesh.radius=1.35
+ sun_mesh.height=2.7
+ var sunset:=_city_add_mesh(city,sun_mesh,Vector3(-3.7,8.0,-25.0),Color("#ffc58a"))
+ var sun_material:=StandardMaterial3D.new()
+ sun_material.albedo_color=Color("#ffc58a")
+ sun_material.emission_enabled=true
+ sun_material.emission=Color("#ff9b69")
+ sunset.material_override=sun_material
+ for x_side in [-1,1]:
+  for i in range(2):
+   var x:=float(x_side)*(4.7+float(i)*0.25)
+   var z:=1.0-float(i)*5.0
+   var trunk:=CylinderMesh.new()
+   trunk.top_radius=0.12
+   trunk.bottom_radius=0.16
+   trunk.height=1.8
+   _city_add_mesh(city,trunk,Vector3(x,0.8,z),Color("#604a3d"))
+   var crown:=SphereMesh.new()
+   crown.radius=0.72
+   crown.height=1.44
+   _city_add_mesh(city,crown,Vector3(x,2.0,z),Color("#52775e"))
+ var pole:=CylinderMesh.new()
+ pole.top_radius=0.035
+ pole.bottom_radius=0.045
+ pole.height=4.4
+ _city_add_mesh(city,pole,Vector3(-4.3,3.8,-4.8),Color("#e6e5df"))
+ _city_box(city,Vector3(1.25,0.28,0.05),Vector3(-3.65,5.45,-4.8),Color("#239f40"))
+ _city_box(city,Vector3(1.25,0.28,0.05),Vector3(-3.65,5.17,-4.8),Color("#ffffff"))
+ _city_box(city,Vector3(1.25,0.28,0.05),Vector3(-3.65,4.89,-4.8),Color("#da0000"))
+ _city_box(city,Vector3(0.16,0.16,0.07),Vector3(-3.65,5.17,-4.73),Color("#da0000"))
+ var car:=Node3D.new()
+ car.name="ClassicRedCar"
+ car.position=Vector3(-2.0,0.0,5.4)
+ city.add_child(car)
+ _city_box(car,Vector3(2.1,0.58,1.16),Vector3(0.0,0.58,0.0),Color("#b84235"))
+ _city_box(car,Vector3(1.2,0.62,0.94),Vector3(0.0,1.12,-0.06),Color("#d45a43"))
+ _city_box(car,Vector3(0.98,0.40,0.035),Vector3(0.0,1.14,0.43),Color("#8bb8c5"))
+ _city_box(car,Vector3(0.94,0.38,0.035),Vector3(0.0,1.14,-0.52),Color("#8bb8c5"))
+ var wheel_mesh:=CylinderMesh.new()
+ wheel_mesh.top_radius=0.29
+ wheel_mesh.bottom_radius=0.29
+ wheel_mesh.height=0.20
+ wheel_mesh.radial_segments=16
+ for wheel_x in [-0.72,0.72]:
+  for wheel_z in [-0.43,0.43]:
+   var wheel:=_city_add_mesh(car,wheel_mesh,Vector3(wheel_x,0.30,wheel_z),Color("#20252b"))
+   wheel.rotation.z=PI*0.5
+ var cat:=Node3D.new()
+ cat.name="OrangeCatMascot"
+ cat.position=Vector3(2.1,0.0,4.5)
+ city.add_child(cat)
+ var cat_body:=SphereMesh.new()
+ cat_body.radius=0.62
+ cat_body.height=1.24
+ _city_add_mesh(cat,cat_body,Vector3(0.0,0.85,0.0),Color("#d98b42"),Vector3(0.88,1.12,0.92))
+ var cat_head:=SphereMesh.new()
+ cat_head.radius=0.56
+ cat_head.height=1.12
+ _city_add_mesh(cat,cat_head,Vector3(0.0,1.78,0.28),Color("#e49b4c"))
+ var ear_mesh:=CylinderMesh.new()
+ ear_mesh.top_radius=0.015
+ ear_mesh.bottom_radius=0.30
+ ear_mesh.height=0.56
+ ear_mesh.radial_segments=5
+ _city_add_mesh(cat,ear_mesh,Vector3(-0.36,2.23,0.18),Color("#d98b42"))
+ _city_add_mesh(cat,ear_mesh,Vector3(0.36,2.23,0.18),Color("#d98b42"))
+ _city_box(cat,Vector3(0.78,0.18,0.12),Vector3(0.0,1.94,0.75),Color("#222a32"))
+ _city_box(cat,Vector3(0.28,0.16,0.12),Vector3(-0.23,1.90,0.83),Color("#101820"))
+ _city_box(cat,Vector3(0.28,0.16,0.12),Vector3(0.23,1.90,0.83),Color("#101820"))
+ _city_box(cat,Vector3(0.12,0.07,0.10),Vector3(0.0,1.90,0.88),Color("#d6b36d"))
+ _city_box(cat,Vector3(1.08,0.30,0.82),Vector3(0.0,1.35,0.04),Color("#8f2930"))
+ var tail:=CylinderMesh.new()
+ tail.top_radius=0.10
+ tail.bottom_radius=0.14
+ tail.height=0.95
+ tail.radial_segments=8
+ var tail_node:=_city_add_mesh(cat,tail,Vector3(-0.58,1.05,-0.45),Color("#cb7d39"))
+ tail_node.rotation.z=-0.75
+
+func _city_add_mesh(parent:Node3D,mesh:Mesh,at:Vector3,tint:Color,scale:Vector3=Vector3.ONE)->MeshInstance3D:
+ var item:=MeshInstance3D.new()
+ item.mesh=mesh
+ item.position=at
+ item.scale=scale
+ var material:=StandardMaterial3D.new()
+ material.albedo_color=tint
+ material.roughness=0.72
+ material.metallic=0.08
+ item.material_override=material
+ item.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+ parent.add_child(item)
+ return item
+
+func _city_box(parent:Node3D,size:Vector3,at:Vector3,tint:Color)->MeshInstance3D:
+ var mesh:=BoxMesh.new()
+ mesh.size=size
+ return _city_add_mesh(parent,mesh,at,tint)
 
 func _draw_intro(s:Vector2)->void:
  var card:=Rect2(s.x*0.07,s.y*0.20,s.x*0.86,s.y*0.57)
@@ -170,33 +369,30 @@ func _draw_intro(s:Vector2)->void:
  _button(Rect2(s.x*0.10,s.y*0.82,s.x*0.80,58),"ورود به زندگی",C.gold)
 
 func _draw_home_art(s:Vector2)->void:
- var c:=Vector2(s.x*0.5,s.y*0.355)
- draw_circle(c,104,C.panel)
- draw_arc(c,94,0,TAU,80,C.gold,3)
- draw_circle(c,44,Color("#304638"))
- draw_arc(c,42,0,TAU,64,C.white,2)
- for i in range(8):
-  var angle:float=-PI/2.0+float(i)*TAU/8.0
-  var p:=c+Vector2(cos(angle),sin(angle))*132.0
-  draw_line(c+Vector2(cos(angle),sin(angle))*108.0,p,C.blue,2)
-  draw_circle(p,11,C.gold if i<stage else C.panel2)
- _center("ایران",c.y+8,24,C.white)
+ var card:=Rect2(s.x*0.07,s.y*0.145,s.x*0.86,s.y*0.375)
+ _draw_rounded_rect(Rect2(card.position+Vector2(0,7),card.size),Color(0.015,0.025,0.04,0.66),25.0)
+ _draw_rounded_rect(card,Color(0.055,0.085,0.12,0.68),25.0)
+ _draw_rounded_outline(card,Color(0.91,0.74,0.44,0.55),25.0,2.0)
+ _center("ایران",s.y*0.285,54,C.gold)
+ draw_line(Vector2(s.x*0.23,s.y*0.33),Vector2(s.x*0.77,s.y*0.33),Color(0.91,0.74,0.44,0.55),2.0)
+ _center("یک زندگی، هزار انتخاب",s.y*0.385,23,C.white)
+ _center("از شرایط تولد تا مسیر زندگی",s.y*0.435,15,C.muted)
+ _draw_rounded_rect(Rect2(s.x*0.32,s.y*0.465,s.x*0.36,28),Color(0.14,0.31,0.23,0.92),14.0)
+ _center("بازی آفلاین",s.y*0.485,12,C.white)
 
 func _draw_game(s: Vector2) -> void:
- _header("بازی فرعی","مرحله %d  •  %s" % [stage+1,GAME_NAMES[active_game]])
- _center(GAME_HINTS[active_game],s.y*0.19,16,C.muted)
- _center("دور %d  |  مأموریت %d" % [round_no,task_index+1],s.y*0.25,15,C.gold)
- var ratio:=clampf(float(progress)/float(maxi(1,target)),0.0,1.0)
- var bar:=Rect2(s.x*0.10,s.y*0.30,s.x*0.80,14)
- draw_rect(bar,C.panel2)
- draw_rect(Rect2(bar.position,Vector2(bar.size.x*ratio,bar.size.y)),C.green)
- _center("%s / %s" % [_fmt(progress),_fmt(target)],s.y*0.36,17,C.white)
+ _header("چالش زندگی",GAME_NAMES[active_game])
+ _center(GAME_HINTS[active_game],s.y*0.185,16,C.white)
+ _center("دور %d  •  درخواست %d" % [round_no,task_index+1],s.y*0.245,14,C.gold)
+ var board:=Rect2(s.x*0.045,s.y*0.29,s.x*0.91,s.y*0.43)
+ _draw_rounded_rect(Rect2(board.position+Vector2(0,6),board.size),Color(0.01,0.02,0.03,0.34),22.0)
+ _draw_rounded_rect(board,Color(0.055,0.085,0.12,0.88),22.0)
+ _draw_rounded_outline(board,Color(0.91,0.74,0.44,0.32),22.0,1.5)
+ draw_line(Vector2(board.position.x+28,board.position.y+2),Vector2(board.end.x-28,board.position.y+2),Color(0.91,0.74,0.44,0.56),2.0)
  _draw_minigame_board(s)
- _center(_action_label(),s.y*0.77,14,C.gold)
- _button(Rect2(20,s.y-76,140,48),"بازگشت به انتخاب",C.panel)
- _center("عملیات ثبت‌شده: %d" % total_actions,s.y-18,12,C.muted)
- if active_game==23:
-  _center("زمان باقی‌مانده: %d ثانیه" % int(mini_state.get("time_left",30)),s.y*0.40,14,C.gold)
+ _center(_action_label(),s.y*0.775,14,C.gold)
+ _center("حرکت‌های ثبت‌شده: %d" % total_actions,s.y*0.81,12,C.muted)
+ _button(Rect2(20,s.y-76,150,48),"بازگشت به انتخاب",C.panel)
 
 func _draw_minigame_board(s: Vector2) -> void:
  var c:=Vector2(s.x*0.5,s.y*0.53)
@@ -709,21 +905,14 @@ func _draw_ending_art(s:Vector2)->void:
   var scale_factor:=minf(area.size.x/tex_size.x,area.size.y/tex_size.y)
   var draw_size:=tex_size*scale_factor
   var dest:=Rect2(area.get_center()-draw_size*0.5,draw_size)
-  draw_rect(dest.grow(7),C.gold,true)
+  _draw_rounded_rect(dest.grow(9),Color("#cfa45f"),12.0)
+  _draw_rounded_rect(dest.grow(4),Color("#192b38"),9.0)
   draw_texture_rect(ending_texture,dest,false)
   return
- draw_circle(c,105,Color("#263844"))
- for i in range(3):
-  var x:=c.x+(i-1)*86
-  draw_rect(Rect2(x-30,c.y-28,60,88),Color("#f2c637"),true)
-  draw_circle(Vector2(x,c.y-28),30,Color("#f2c637"))
-  draw_circle(Vector2(x,c.y+60),30,Color("#f2c637"))
-  draw_circle(Vector2(x,c.y-18),17,C.white)
-  draw_circle(Vector2(x,c.y-18),7,C.bg)
-  draw_rect(Rect2(x-25,c.y+32,50,24),Color("#3b74a3"),true)
-  draw_line(Vector2(x-27,c.y+44),Vector2(x-48,c.y+70),C.bg,5)
-  draw_line(Vector2(x+27,c.y+44),Vector2(x+48,c.y+70),C.bg,5)
- _center("مأموریت به پایان رسید!",c.y+135,16,C.gold)
+ _draw_rounded_rect(Rect2(c.x-110,c.y-88,220,176),C.panel,22.0)
+ _draw_rounded_outline(Rect2(c.x-110,c.y-88,220,176),C.gold,22.0,2.0)
+ _center("ایران",c.y+8,36,C.gold)
+ _center("پایان مسیر انتخاب‌ها",c.y+128,15,C.muted)
 
 func _center(t:String,y:float,size:int,color:Color) -> void:
  var w:=get_viewport_rect().size.x
@@ -767,12 +956,16 @@ func _draw_rounded_outline(r:Rect2,color:Color,radius:float,width:float=1.0)->vo
  draw_polyline(points,color,width,true)
 
 func _button(r:Rect2,t:String,color:Color) -> void:
- var radius:=minf(16.0,r.size.y*0.34)
- _draw_rounded_rect(Rect2(r.position+Vector2(0,4),r.size),color.darkened(0.32),radius)
+ var radius:=minf(17.0,r.size.y*0.34)
+ _draw_rounded_rect(Rect2(r.position+Vector2(0,5),r.size),color.darkened(0.38),radius)
  _draw_rounded_rect(r,color,radius)
- _draw_rounded_outline(r,Color(1,1,1,0.10),radius,1.2)
- draw_line(Vector2(r.position.x+radius,r.position.y+1),Vector2(r.position.x+r.size.x-radius,r.position.y+1),Color(1,1,1,0.13),1.0)
- draw_string(FONT_BOLD,Vector2(r.position.x+8,r.position.y+r.size.y*0.62),t,HORIZONTAL_ALIGNMENT_CENTER,r.size.x-16,17,C.white)
+ _draw_rounded_outline(r,Color(1,1,1,0.15),radius,1.2)
+ _draw_rounded_outline(r.grow(-2.0),Color(0.91,0.74,0.44,0.20),maxf(4.0,radius-2.0),1.0)
+ draw_line(Vector2(r.position.x+radius,r.position.y+2),Vector2(r.position.x+r.size.x-radius,r.position.y+2),Color(1,1,1,0.19),1.2)
+ var font_size:=17
+ if t.length()>24: font_size=14
+ elif t.length()>18: font_size=15
+ draw_string(FONT_BOLD,Vector2(r.position.x+8,r.position.y+r.size.y*0.62),t,HORIZONTAL_ALIGNMENT_CENTER,r.size.x-16,font_size,C.white)
 
 func _hit(r:Rect2,p:Vector2)->bool:
  return r.has_point(p)
