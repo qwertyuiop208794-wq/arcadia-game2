@@ -453,7 +453,7 @@ func _draw_profile_create(s:Vector2)->void:
  _button(Rect2(20,s.y-76,116,48),"انصراف",C.panel)
 
 func _draw_settings(s:Vector2)->void:
- _header("پروفایل و تنظیمات","تنظیمات فقط برای "+_current_profile_name())
+ _header("تنظیمات بازی","همه تغییرات روی همین گوشی ذخیره می‌شوند")
  var labels:=[]
  labels.append("موسیقی: "+("روشن" if settings["music"] else "خاموش"))
  labels.append("افکت صوتی: "+("روشن" if settings["effects"] else "خاموش"))
@@ -671,7 +671,7 @@ func _setting_action(index:int)->void:
   12: settings["theme"]=posmod(int(settings["theme"])+1,4)
   13:
    _save(true)
-   screen="profile_select"
+   screen="home"
    _play_sfx("tap")
    return
   14:
@@ -763,7 +763,7 @@ func _tap(p:Vector2,travel:float)->void:
  _play_sfx("tap")
  var s:=get_viewport_rect().size
  if screen=="splash":
-  screen="profile_select"
+  screen="home"
  elif screen=="home":
   if p.x<155 and p.y<100:
    screen="profile_select"
@@ -789,8 +789,8 @@ func _tap(p:Vector2,travel:float)->void:
     _select_profile(selected)
    elif p.y>=y+profile_names.size()*(h+12) and p.y<=y+profile_names.size()*(h+12)+60:
     if profile_names.size()<MAX_PROFILES:
-     screen="profile_create"
-     profile_input.visible=true
+     screen="home"
+     profile_input.visible=false
      profile_input.text=""
      profile_input.grab_focus()
     else:
