@@ -6,9 +6,6 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/android-apk.yml"
-      - "iran_game.gd"
-      - "iran_icon.svg"
-      - "Arcadia_Android_Source_Ready.zip"
       - ".build-trigger"
 
 jobs:
@@ -35,9 +32,19 @@ jobs:
           cp "$GITHUB_WORKSPACE/iran_icon.svg" "$PROJECT_DIR/assets/iran_icon.svg"
           sed -i 's@config/icon=.*@config/icon="res://assets/iran_icon.svg"@' "$PROJECT_DIR/project.godot"
           sed -i 's@application/icon=.*@application/icon="res://assets/iran_icon.svg"@' "$PROJECT_DIR/export_presets.cfg"
-          rm -f "$PROJECT_DIR/assets/ending_photo.jpg" "$PROJECT_DIR/assets/ending_photo.jpg.import"
-          echo "=== Removed unrelated previous ending photo ==="
-          echo "The agreed final image will be added when the original Minions image is available."
+          test -s "$GITHUB_WORKSPACE/ending_photo.jpg.b64"
+          base64 --decode "$GITHUB_WORKSPACE/ending_photo.jpg.b64" > "$PROJECT_DIR/assets/ending_photo.jpg"
+          test -s "$PROJECT_DIR/assets/ending_photo.jpg"
+          test -s "$GITHUB_WORKSPACE/boot_splash.png.b64"
+          base64 --decode "$GITHUB_WORKSPACE/boot_splash.png.b64" > "$PROJECT_DIR/assets/boot_splash.png"
+          test -s "$PROJECT_DIR/assets/boot_splash.png"
+          echo "=== Exact user market photo included for the ending ==="
+          file "$PROJECT_DIR/assets/ending_photo.jpg"
+          echo "=== Persian creator-only boot splash included ==="
+          file "$PROJECT_DIR/assets/boot_splash.png"
+          sed -i '/^config\/icon=/a boot_splash/image="res://assets/boot_splash.png"\nboot_splash/fullsize=true\nboot_splash/use_filter=true\nboot_splash/bg_color=Color(0.047, 0.078, 0.11, 1)' "$PROJECT_DIR/project.godot"
+          echo "=== Custom creator splash settings ==="
+          grep -nE 'boot_splash|config/icon' "$PROJECT_DIR/project.godot"
           sed -i 's@config/name="آرکادیا"@config/name="ایران"@' "$PROJECT_DIR/project.godot"
           sed -i 's/package\/name="آرکادیا"/package\/name="ایران"/' "$PROJECT_DIR/export_presets.cfg"
           sed -i 's/package\/unique_name="com.arcadia.realm"/package\/unique_name="com.iran.game"/' "$PROJECT_DIR/export_presets.cfg"
