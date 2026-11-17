@@ -166,7 +166,7 @@ func _setup_3d_city()->void:
  city_viewport=SubViewport.new()
  city_viewport.name="IranCity3D"
  city_viewport.size=Vector2i(540,960)
- city_viewport.render_target_update_mode=SubViewport.UPDATE_ALWAYS
+ city_viewport.render_target_update_mode=SubViewport.UPDATE_ONCE
  city_viewport.msaa_3d=Viewport.MSAA_2X
  add_child(city_viewport)
  var world_env:=WorldEnvironment.new()
@@ -183,9 +183,9 @@ func _setup_3d_city()->void:
  camera.projection=Camera3D.PROJECTION_ORTHOGONAL
  camera.size=22.0
  camera.position=Vector3(0.0,8.0,23.0)
+ city_viewport.add_child(camera)
  camera.look_at(Vector3(0.0,3.3,-5.0),Vector3.UP)
  camera.current=true
- city_viewport.add_child(camera)
  var sun:=DirectionalLight3D.new()
  sun.rotation_degrees=Vector3(-48.0,-28.0,0.0)
  sun.light_color=Color("#ffd0a0")
@@ -1022,7 +1022,7 @@ func _tap(p:Vector2,travel:float)->void:
   else:
    var opts:Array=STAGES[stage]["opts"]
    var h:=minf(66.0,(s.y*0.55)/opts.size())
-   var idx:=int(floor((p.y-s.y*0.29)/(h+8.0)))
+   var idx:=int(floor((p.y-s.y*0.29)/(h+9.0)))
    if idx>=0 and idx<opts.size():
     if idx==int(STAGES[stage]["pass"]):
      completed_choices.append(idx)
