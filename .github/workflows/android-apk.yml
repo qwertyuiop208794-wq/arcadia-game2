@@ -9,7 +9,6 @@ on:
       - "iran_game.gd"
       - "iran_icon.svg"
       - "Arcadia_Android_Source_Ready.zip"
-      - "ending_photo.jpg.b64"
       - ".build-trigger"
 
 jobs:
@@ -36,11 +35,9 @@ jobs:
           cp "$GITHUB_WORKSPACE/iran_icon.svg" "$PROJECT_DIR/assets/iran_icon.svg"
           sed -i 's@config/icon=.*@config/icon="res://assets/iran_icon.svg"@' "$PROJECT_DIR/project.godot"
           sed -i 's@application/icon=.*@application/icon="res://assets/iran_icon.svg"@' "$PROJECT_DIR/export_presets.cfg"
-          test -s "$GITHUB_WORKSPACE/ending_photo.jpg.b64"
-          base64 --decode "$GITHUB_WORKSPACE/ending_photo.jpg.b64" > "$PROJECT_DIR/assets/ending_photo.jpg"
-          test -s "$PROJECT_DIR/assets/ending_photo.jpg"
-          echo "=== Ending photo included ==="
-          ls -lh "$PROJECT_DIR/assets/ending_photo.jpg"
+          rm -f "$PROJECT_DIR/assets/ending_photo.jpg" "$PROJECT_DIR/assets/ending_photo.jpg.import"
+          echo "=== Removed unrelated previous ending photo ==="
+          echo "The agreed final image will be added when the original Minions image is available."
           sed -i 's@config/name="آرکادیا"@config/name="ایران"@' "$PROJECT_DIR/project.godot"
           sed -i 's/package\/name="آرکادیا"/package\/name="ایران"/' "$PROJECT_DIR/export_presets.cfg"
           sed -i 's/package\/unique_name="com.arcadia.realm"/package\/unique_name="com.iran.game"/' "$PROJECT_DIR/export_presets.cfg"
